@@ -219,6 +219,10 @@ export function TaskListScreen({ repository, notifications }: Props) {
         </Pressable>
       </View>
 
+      <Text style={styles.inputHint}>
+        💡 비밀번호·주민번호 등 민감정보는 입력하지 마세요.
+      </Text>
+
       {actionError ? (
         <Pressable onPress={() => setActionError('')} style={styles.actionError} accessibilityRole="button" accessibilityLabel="오류 닫기">
           <Text style={styles.actionErrorText}>⚠ {actionError}</Text>
@@ -285,7 +289,8 @@ function makeStyles(t: Theme) {
     statLabel: { fontSize: 12, color: t.textMuted, marginTop: 2 },
     bar: { height: 6, borderRadius: 3, backgroundColor: t.surfaceAlt, marginTop: 8, overflow: 'hidden' },
     barFill: { height: 6, borderRadius: 3, backgroundColor: t.primary },
-    addBar: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+    addBar: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
+    inputHint: { paddingHorizontal: 16, paddingBottom: 10, fontSize: 12, color: t.textFaint },
     input: { flex: 1, borderWidth: 1, borderColor: t.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: t.text, backgroundColor: t.bg },
     dueToggle: { justifyContent: 'center', paddingHorizontal: 12, borderRadius: 8, backgroundColor: t.surfaceAlt },
     dueToggleText: { fontSize: 13, color: t.textMuted, fontWeight: '600' },

@@ -1,6 +1,7 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
+import { clearLocalCacheOnLogout } from './localCleanup';
 
 /**
  * Supabase 인증 전역 상태 (화면과 분리 — 데이터/세션 로직만).
@@ -49,8 +50,11 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    const userId = session?.user?.id; // 로그아웃 전 사용자 id 확보
     if (supabase) await supabase.auth.signOut();
-  }, []);
+    // 이전 완료 시에만 비로그인 로컬 캐시(평문) 정리(미이전 데이터 유실 방지)
+    await clearLocalCacheOnLogout(userId);
+  }, [session]);
 
   const value: SupabaseAuthValue = {
     user: session?.user ?? null,
