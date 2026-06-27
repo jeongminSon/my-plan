@@ -12,9 +12,14 @@ function env(name: string): string | undefined {
   return typeof process !== 'undefined' && process.env ? process.env[name] : undefined;
 }
 
+// OAuth 클라이언트 ID는 비밀이 아니라 클라이언트에 내장되는 공개값이므로 기본값으로 둔다.
+// (필요 시 EXPO_PUBLIC_* 환경변수로 덮어쓸 수 있다)
+const DEFAULT_WEB_CLIENT_ID = '461306027421-38l0aaecom7ntppgmgj2jrnbbrn8a6gl.apps.googleusercontent.com';
+const DEFAULT_ANDROID_CLIENT_ID = '461306027421-47dplm4qbdcsmjavg30bfndml106mcu7.apps.googleusercontent.com';
+
 export const googleClientIds = {
-  web: env('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID'),
-  android: env('EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID'),
+  web: env('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID') ?? DEFAULT_WEB_CLIENT_ID,
+  android: env('EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID') ?? DEFAULT_ANDROID_CLIENT_ID,
   ios: env('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID'),
 };
 

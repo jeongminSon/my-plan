@@ -3,6 +3,7 @@
     "name": "my-plan",
     "slug": "my-plan",
     "version": "1.0.0",
+    "scheme": "myplan",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

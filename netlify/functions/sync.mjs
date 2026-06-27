@@ -3,12 +3,18 @@ import { OAuth2Client } from 'google-auth-library';
 
 const googleClient = new OAuth2Client();
 
+// OAuth 클라이언트 ID는 공개값 → 기본 허용 목록으로 둔다(필요 시 env로 덮어쓰기).
+const DEFAULT_AUDIENCES = [
+  '461306027421-38l0aaecom7ntppgmgj2jrnbbrn8a6gl.apps.googleusercontent.com',
+  '461306027421-47dplm4qbdcsmjavg30bfndml106mcu7.apps.googleusercontent.com',
+].join(',');
+
 /**
  * 구글 id_token 검증 → 검증된 sub 반환.
- * audience(허용 클라이언트 ID)는 Netlify 환경변수 GOOGLE_ALLOWED_AUDIENCES(쉼표구분)에서 읽는다.
+ * audience(허용 클라이언트 ID)는 env GOOGLE_ALLOWED_AUDIENCES 우선, 없으면 기본값.
  */
 async function verifyGoogleSub(idToken) {
-  const audiences = (process.env.GOOGLE_ALLOWED_AUDIENCES || '')
+  const audiences = (process.env.GOOGLE_ALLOWED_AUDIENCES || DEFAULT_AUDIENCES)
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
