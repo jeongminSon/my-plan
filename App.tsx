@@ -2,7 +2,6 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { AuthProvider } from './src/auth/AuthContext';
 import { AuthGate } from './src/auth/AuthGate';
 import { AuthScreen } from './src/auth/screens/AuthScreen';
 import { SupabaseAuthProvider, useSupabaseAuth } from './src/auth/SupabaseAuthContext';
@@ -23,9 +22,7 @@ export default function App() {
       <ErrorBoundary>
         <ThemeProvider>
           <SupabaseAuthProvider>
-            <AuthProvider>
-              <ThemedRoot />
-            </AuthProvider>
+            <ThemedRoot />
           </SupabaseAuthProvider>
         </ThemeProvider>
       </ErrorBoundary>
@@ -51,13 +48,7 @@ function AppData() {
   if (configured && session && supabase) {
     return <CloudApp userId={session.user.id} />;
   }
-  return (
-    <TaskListScreen
-      repository={taskRepository}
-      syncStore={taskRepository}
-      notifications={notificationService}
-    />
-  );
+  return <TaskListScreen repository={taskRepository} notifications={notificationService} />;
 }
 
 /** 클라우드 저장소 + 1회성 마이그레이션 게이트(유실 방지). */

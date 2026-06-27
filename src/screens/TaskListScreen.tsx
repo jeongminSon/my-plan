@@ -2,10 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ProfileMenu } from '../auth/ProfileMenu';
 import { ListBar, ListFilter } from '../components/ListBar';
-import { SyncBar } from '../components/SyncBar';
 import { TaskItem } from '../components/TaskItem';
 import { TaskRepository } from '../data/taskRepository';
-import { SyncStore } from '../sync/SyncStore';
 import { Priority, RepeatRule, Task } from '../models/Task';
 import { TaskList } from '../models/TaskList';
 import { NotificationService } from '../services/NotificationService';
@@ -24,13 +22,11 @@ import { selectAllTasks, selectTodayTasks, todayProgress } from '../utils/todayV
 interface Props {
   repository: TaskRepository;
   notifications: NotificationService;
-  /** 로컬 모드에서만 전달 — 있으면 레거시 동기화 바(Netlify) 표시. 클라우드(Supabase) 모드에선 생략 */
-  syncStore?: SyncStore;
 }
 
 type ViewMode = 'today' | 'all';
 
-export function TaskListScreen({ repository, notifications, syncStore }: Props) {
+export function TaskListScreen({ repository, notifications }: Props) {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { preference, setPreference } = useThemePreference();
@@ -192,9 +188,6 @@ export function TaskListScreen({ repository, notifications, syncStore }: Props) 
           <Text style={styles.statLabel}>이번 주 완료</Text>
         </View>
       </View>
-
-      {/* 레거시 동기화 바(로컬 모드 전용). Supabase 클라우드 모드에선 저장소 자체가 클라우드라 생략 */}
-      {syncStore ? <SyncBar store={syncStore} onSynced={reload} /> : null}
 
       <ListBar
         lists={lists}
