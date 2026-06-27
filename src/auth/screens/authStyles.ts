@@ -1,0 +1,42 @@
+import { StyleSheet } from 'react-native';
+import { Theme } from '../../theme/theme';
+
+/** 인증 화면 공통 스타일 (모바일 우선, 중앙 단일 컬럼). */
+export function makeAuthStyles(t: Theme) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 20 },
+    card: { width: '100%', maxWidth: 420, gap: 14 },
+    title: { fontSize: 26, fontWeight: '800', color: t.text },
+    subtitle: { fontSize: 14, color: t.textMuted, marginTop: -6 },
+    // 주요 버튼: 가장 높은 대비(브랜드색은 버튼/강조에만)
+    button: {
+      minHeight: 48,
+      borderRadius: 10,
+      backgroundColor: t.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 4,
+    },
+    buttonDisabled: { opacity: 0.6 },
+    buttonText: { color: t.onPrimary, fontSize: 16, fontWeight: '700' },
+    // 상단 배너(오류/성공) — 색 + 아이콘 + 문구
+    banner: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10 },
+    bannerError: { backgroundColor: t.dangerBg },
+    bannerSuccess: { backgroundColor: t.successBg },
+    bannerIconError: { color: t.danger, fontSize: 16 },
+    bannerIconSuccess: { color: t.success, fontSize: 16 },
+    bannerTextError: { color: t.danger, fontSize: 13, flex: 1, fontWeight: '600' },
+    bannerTextSuccess: { color: t.success, fontSize: 13, flex: 1, fontWeight: '600' },
+    // 링크
+    linkRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' },
+    linkMuted: { color: t.textMuted, fontSize: 14 },
+    link: { color: t.primary, fontSize: 14, fontWeight: '700' },
+    // 비밀번호 강도
+    strengthWrap: { gap: 4 },
+    strengthBars: { flexDirection: 'row', gap: 4 },
+    strengthSeg: { flex: 1, height: 5, borderRadius: 3, backgroundColor: t.surfaceAlt },
+    strengthLabel: { fontSize: 12, color: t.textMuted },
+  });
+}

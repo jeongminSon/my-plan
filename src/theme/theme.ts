@@ -18,6 +18,8 @@ export interface Theme {
   onPrimary: string;
   danger: string;
   dangerBg: string;
+  success: string;
+  successBg: string;
   priorityHigh: string;
   priorityMed: string;
   priorityLow: string;
@@ -36,6 +38,8 @@ export const lightTheme: Theme = {
   onPrimary: '#ffffff',
   danger: '#c8322f',
   dangerBg: '#fdecea',
+  success: '#1f7a4d', // 브랜드/오류 색과 구분되는 성공 초록 (AA on white)
+  successBg: '#e6f4ec',
   priorityHigh: '#d6453f',
   priorityMed: '#c9810a',
   priorityLow: '#2f9461',
@@ -54,6 +58,8 @@ export const darkTheme: Theme = {
   onPrimary: '#0b1220',
   danger: '#ff6b6b',
   dangerBg: '#3a2526',
+  success: '#4cc38a',
+  successBg: '#1e2e26',
   priorityHigh: '#ff6b6b',
   priorityMed: '#f5b544',
   priorityLow: '#4cc38a',

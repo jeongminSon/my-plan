@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ProfileMenu } from '../auth/ProfileMenu';
 import { ListBar, ListFilter } from '../components/ListBar';
 import { SyncBar } from '../components/SyncBar';
 import { TaskItem } from '../components/TaskItem';
@@ -143,9 +144,12 @@ export function TaskListScreen({ repository, notifications }: Props) {
           <Text style={styles.count}>오늘 {progress.total}개 중 {progress.done}개 완료</Text>
         </View>
         <View style={styles.headerRight}>
-          <Pressable onPress={cycleTheme} style={styles.themeBtn} accessibilityLabel={`테마: ${themeBtn}`}>
-            <Text style={styles.themeBtnText}>{themeBtn}</Text>
-          </Pressable>
+          <View style={styles.headerTopRow}>
+            <ProfileMenu />
+            <Pressable onPress={cycleTheme} style={styles.themeBtn} accessibilityLabel={`테마: ${themeBtn}`}>
+              <Text style={styles.themeBtnText}>{themeBtn}</Text>
+            </Pressable>
+          </View>
           <View style={styles.toggle}>
             <ViewToggleButton styles={styles} label="오늘" active={view === 'today'} onPress={() => setView('today')} />
             <ViewToggleButton styles={styles} label="전체" active={view === 'all'} onPress={() => setView('all')} />
@@ -247,6 +251,7 @@ function makeStyles(t: Theme) {
     headerTitle: { fontSize: 28, fontWeight: '700', color: t.text },
     count: { fontSize: 14, color: t.textMuted, marginTop: 4 },
     headerRight: { alignItems: 'flex-end', gap: 6 },
+    headerTopRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     themeBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: t.surfaceAlt },
     themeBtnText: { fontSize: 12, color: t.textMuted, fontWeight: '600' },
     toggle: { flexDirection: 'row', backgroundColor: t.surfaceAlt, borderRadius: 10, padding: 2 },

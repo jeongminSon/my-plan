@@ -20,7 +20,9 @@ export function AuthGate({
   fallback: ReactNode;
   loadingView?: ReactNode;
 }) {
-  const { loading, session } = useSupabaseAuth();
+  const { loading, session, configured } = useSupabaseAuth();
+  // Supabase 미설정 시 게이트 통과(기존 앱 그대로 동작 — 비파괴)
+  if (!configured) return <>{children}</>;
   const state = gateState({ loading, hasSession: !!session });
 
   if (state === 'loading') {

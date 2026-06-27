@@ -2,6 +2,8 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/auth/AuthContext';
+import { AuthGate } from './src/auth/AuthGate';
+import { AuthScreen } from './src/auth/screens/AuthScreen';
 import { SupabaseAuthProvider } from './src/auth/SupabaseAuthContext';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { taskRepository } from './src/data/db';
@@ -31,8 +33,10 @@ function ThemedRoot() {
     // edges로 상태바/내비게이션바 영역을 안전하게 피한다(안드로이드 edge-to-edge 대응)
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
-      {/* 저장소·알림 서비스를 화면에 주입(플랫폼별 구현은 Metro가 선택) */}
-      <TaskListScreen repository={taskRepository} notifications={notificationService} />
+      {/* 보호 게이트: 로그인해야 앱 진입(Supabase 미설정 시 통과). 저장소·알림은 화면에 주입 */}
+      <AuthGate fallback={<AuthScreen />}>
+        <TaskListScreen repository={taskRepository} notifications={notificationService} />
+      </AuthGate>
     </SafeAreaView>
   );
 }
