@@ -90,5 +90,36 @@ export function makeAuthStyles(t: Theme) {
     strengthBars: { flexDirection: 'row', gap: 4 },
     strengthSeg: { flex: 1, height: 5, borderRadius: 3, backgroundColor: t.surfaceAlt },
     strengthLabel: { fontSize: 12, color: t.textMuted },
+    // 개인정보 수집·이용 동의
+    consentRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: t.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxChecked: { backgroundColor: t.primary, borderColor: t.primary },
+    checkboxMark: { color: t.onPrimary, fontSize: 13, fontWeight: '900', lineHeight: 15 },
+    consentText: { fontSize: 13, color: t.textMuted },
+    consentLink: { fontSize: 13, color: t.primary, fontWeight: '700' },
+    // 동의 모달
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+    modalCard: {
+      width: '100%',
+      maxWidth: 480,
+      alignSelf: 'center',
+      backgroundColor: t.bg,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: t.border,
+      padding: 20,
+      gap: 12,
+    },
+    privacyRow: { gap: 2, marginBottom: 8 },
+    privacyKey: { fontSize: 13, fontWeight: '700', color: t.text },
+    privacyVal: { fontSize: 13, color: t.textMuted, lineHeight: 18 },
   });
 }

@@ -13,6 +13,7 @@ import {
 } from '../validation';
 import { AuthField } from './AuthField';
 import { makeAuthStyles, PressableState, webFocusRing } from './authStyles';
+import { PrivacyModal } from './PrivacyModal';
 
 interface Props {
   onSwitchToLogin: () => void;
@@ -28,6 +29,8 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [topError, setTopError] = useState('');
   const [signedUp, setSignedUp] = useState(false);
+  const [agreed, setAgreed] = useState(false); // 개인정보 수집·이용 동의(필수)
+  const [showPrivacy, setShowPrivacy] = useState(false);
   // 6자리 코드 인증
   const [otp, setOtp] = useState('');
   const [verifying, setVerifying] = useState(false);
@@ -41,6 +44,10 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
     const v = validateSignup({ email, password, confirm });
     setErrors(v);
     if (v.email || v.password || v.confirm) return; // 검증 오류 → API 호출 안 함
+    if (!agreed) {
+      setTopError('개인정보 수집·이용에 동의해 주세요.');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -255,20 +262,59 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
           editable={!submitting}
         />
 
+        {/* 개인정보 수집·이용 동의(필수) */}
+        <View style={s.consentRow}>
+          <Pressable
+            onPress={() => setAgreed((a) => !a)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: agreed }}
+            accessibilityLabel="개인정보 수집·이용 동의 (필수)"
+            hitSlop={8}
+            disabled={submitting}
+            style={(st) => [
+              s.checkbox,
+              agreed && s.checkboxChecked,
+              webFocusRing((st as PressableState).focused ?? false, theme.primary),
+            ]}
+          >
+            {agreed ? <Text style={s.checkboxMark}>✓</Text> : null}
+          </Pressable>
+          <Text style={s.consentText}>(필수) </Text>
+          <Pressable
+            onPress={() => setShowPrivacy(true)}
+            accessibilityRole="link"
+            accessibilityLabel="개인정보 처리방침 보기"
+            style={(st) => webFocusRing((st as PressableState).focused ?? false, theme.primary)}
+          >
+            <Text style={s.consentLink}>개인정보 처리방침</Text>
+          </Pressable>
+          <Text style={s.consentText}>에 동의합니다</Text>
+        </View>
+
         <Pressable
           style={(st) => [
             s.button,
-            submitting && s.buttonDisabled,
+            (submitting || !agreed) && s.buttonDisabled,
             webFocusRing((st as PressableState).focused ?? false, theme.text),
           ]}
           onPress={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || !agreed}
           accessibilityRole="button"
-          accessibilityState={{ busy: submitting, disabled: submitting }}
+          accessibilityState={{ busy: submitting, disabled: submitting || !agreed }}
         >
           {submitting ? <ActivityIndicator color={theme.onPrimary} /> : null}
           <Text style={s.buttonText}>{submitting ? '가입 중…' : '회원가입'}</Text>
         </Pressable>
+
+        <PrivacyModal
+          visible={showPrivacy}
+          onClose={() => setShowPrivacy(false)}
+          onAgree={() => {
+            setAgreed(true);
+            setShowPrivacy(false);
+            setTopError('');
+          }}
+        />
 
         <View style={s.linkRow}>
           <Text style={s.linkMuted}>이미 계정이 있으세요?</Text>
