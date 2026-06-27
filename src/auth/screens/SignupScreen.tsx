@@ -46,10 +46,10 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
           setTopError('이미 가입된 이메일입니다. 로그인해 주세요.');
         else setTopError(MESSAGES.generic);
       } else if (data.session) {
-        // 자동 로그인됨 → AuthGate가 할일 화면으로 전환(별도 네비게이션 불필요)
+        // (Confirm email OFF인 경우) 자동 로그인 → AuthGate가 앱으로 전환
       } else {
-        // 이메일 확인이 켜진 프로젝트
-        setSuccess('확인 이메일을 보냈습니다. 메일의 링크로 가입을 완료해 주세요.');
+        // 표준 흐름: 확인메일 인증 후 로그인(자동 로그인은 스펙아웃)
+        setSuccess('확인 메일을 보냈어요. 메일의 링크로 인증한 뒤 로그인해 주세요.');
       }
     } catch (e) {
       setTopError(isNetworkError(e) ? MESSAGES.network : MESSAGES.generic);

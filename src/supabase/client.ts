@@ -22,6 +22,7 @@ export function isSupabaseConfigured(): boolean {
 export const supabase: SupabaseClient | null =
   url && anonKey
     ? createClient(url, anonKey, {
+        db: { schema: 'public' }, // 스키마 명시(search_path와 무관하게 public 고정)
         auth: {
           storage: AsyncStorage, // 웹=localStorage, 네이티브=기기 저장소
           autoRefreshToken: true,
