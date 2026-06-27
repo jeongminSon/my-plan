@@ -26,7 +26,7 @@ export const webInputReset: TextStyle = IS_WEB
 /** 인증 화면 공통 스타일 (모바일 우선, 중앙 단일 컬럼). */
 export function makeAuthStyles(t: Theme) {
   return StyleSheet.create({
-    screen: { flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 20 },
+    screen: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }, // 배경은 AppBackground
     card: { width: '100%', maxWidth: 420, gap: 14 },
     title: { fontSize: 26, fontWeight: '800', color: t.text },
     subtitle: { fontSize: 14, color: t.textMuted, marginTop: -6 },

@@ -1,8 +1,9 @@
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AuthGate } from './src/auth/AuthGate';
+import { AppBackground } from './src/components/AppBackground';
 import { AuthScreen } from './src/auth/screens/AuthScreen';
 import { NewPasswordScreen } from './src/auth/screens/NewPasswordScreen';
 import { SupabaseAuthProvider, useSupabaseAuth } from './src/auth/SupabaseAuthContext';
@@ -33,18 +34,33 @@ export default function App() {
 
 function ThemedRoot() {
   const theme = useTheme();
-  const { passwordRecovery } = useSupabaseAuth();
+  const { passwordRecovery, session, configured } = useSupabaseAuth();
+
+  // 시간대 적응 배경: AppState가 active로 복귀할 때 시각 재계산(경계 넘으면 배경 갱신)
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') setNow(new Date());
+    });
+    return () => sub.remove();
+  }, []);
+
+  // 메인(정보 밀집)=subtle, 인증/복구=full
+  const showingMain = !passwordRecovery && (!configured || !!session);
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
-      {passwordRecovery ? (
-        // 비밀번호 재설정 링크로 복귀 → 새 비밀번호 설정(세션 있어도 우선)
-        <NewPasswordScreen />
-      ) : (
-        <AuthGate fallback={<AuthScreen />}>
-          <AppData />
-        </AuthGate>
-      )}
+      <AppBackground intensity={showingMain ? 'subtle' : 'full'} now={now}>
+        {passwordRecovery ? (
+          // 비밀번호 재설정 복귀 → 새 비밀번호 설정(세션 있어도 우선)
+          <NewPasswordScreen />
+        ) : (
+          <AuthGate fallback={<AuthScreen />}>
+            <AppData />
+          </AuthGate>
+        )}
+      </AppBackground>
     </SafeAreaView>
   );
 }

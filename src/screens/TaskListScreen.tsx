@@ -291,7 +291,7 @@ function ViewToggleButton({ styles, label, active, onPress }: { styles: ReturnTy
 
 function makeStyles(t: Theme) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: t.bg },
+    container: { flex: 1, backgroundColor: 'transparent' }, // AppBackground가 비치도록
     flex1: { flex: 1 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bg, padding: 24 },
     topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.sm },
