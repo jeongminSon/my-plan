@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { TaskList } from '../models/TaskList';
-import { Theme } from '../theme/theme';
+import { radius, space, Theme, typeScale, weight } from '../theme/theme';
 import { useTheme } from '../theme/ThemeContext';
+import { Icon, IconName } from './Icon';
 
 export type ListFilter = string | 'all';
 
@@ -35,7 +36,14 @@ export function ListBar({ lists, selected, onSelect, onAddList, onRenameList, on
         {lists.map((l) => (
           <Chip key={l.id} styles={styles} label={l.name} active={selected === l.id} onPress={() => onSelect(l.id)} />
         ))}
-        <Chip styles={styles} label={managing ? '✕ 닫기' : '⚙ 관리'} active={false} onPress={() => setManaging((m) => !m)} />
+        <Chip
+          styles={styles}
+          theme={theme}
+          icon={managing ? 'x' : 'settings'}
+          label={managing ? '닫기' : '관리'}
+          active={false}
+          onPress={() => setManaging((m) => !m)}
+        />
       </ScrollView>
 
       {managing ? (
@@ -75,9 +83,25 @@ export function ListBar({ lists, selected, onSelect, onAddList, onRenameList, on
 
 type Styles = ReturnType<typeof makeStyles>;
 
-function Chip({ styles, label, active, onPress }: { styles: Styles; label: string; active: boolean; onPress: () => void }) {
+function Chip({
+  styles,
+  theme,
+  label,
+  active,
+  onPress,
+  icon,
+}: {
+  styles: Styles;
+  theme?: Theme;
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  icon?: IconName;
+}) {
+  const fg = active ? styles.chipTextActive.color : styles.chipText.color;
   return (
     <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]} accessibilityRole="button">
+      {icon ? <Icon name={icon} size={14} color={(fg as string) ?? theme?.textMuted ?? '#000'} /> : null}
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
     </Pressable>
   );
@@ -121,13 +145,21 @@ function ListEditRow({
 
 function makeStyles(t: Theme) {
   return StyleSheet.create({
-    wrap: { paddingBottom: 8 },
-    chips: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
-    chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, backgroundColor: t.surfaceAlt },
+    wrap: { paddingBottom: space.sm },
+    chips: { paddingHorizontal: space.lg, gap: space.sm, alignItems: 'center' },
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.xs,
+      minHeight: 36,
+      paddingHorizontal: space.md,
+      borderRadius: radius.pill,
+      backgroundColor: t.surfaceAlt,
+    },
     chipActive: { backgroundColor: t.primary },
-    chipText: { fontSize: 14, color: t.textMuted },
-    chipTextActive: { color: t.onPrimary, fontWeight: '700' },
-    panel: { marginTop: 10, marginHorizontal: 16, padding: 12, backgroundColor: t.surface, borderRadius: 10, gap: 8 },
+    chipText: { fontSize: typeScale.sm, color: t.textMuted, fontWeight: weight.label },
+    chipTextActive: { color: t.onPrimary, fontWeight: weight.label },
+    panel: { marginTop: space.md, marginHorizontal: space.lg, padding: space.md, backgroundColor: t.surface, borderRadius: radius.md, gap: space.sm },
     addRow: { flexDirection: 'row', gap: 8 },
     editRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
     input: {

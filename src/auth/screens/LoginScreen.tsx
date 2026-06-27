@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { Icon } from '../../components/Icon';
 import { supabase } from '../../supabase/client';
 import { useTheme } from '../../theme/ThemeContext';
 import { signInWithGoogle } from '../supabaseGoogle';
@@ -73,7 +74,7 @@ export function LoginScreen({ onSwitchToSignup }: Props) {
 
         {error ? (
           <View style={[s.banner, s.bannerError]} accessibilityLiveRegion="polite">
-            <Text style={s.bannerIconError}>⚠</Text>
+            <Icon name="alert-triangle" size={16} color={theme.danger} />
             <Text style={s.bannerTextError}>{error}</Text>
           </View>
         ) : null}

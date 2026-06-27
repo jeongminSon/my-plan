@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Icon } from '../components/Icon';
 import { SupabaseTaskRepository } from '../data/supabaseRepository';
 import { supabase } from '../supabase/client';
-import { Theme } from '../theme/theme';
+import { radius, space, Theme, typeScale, weight } from '../theme/theme';
 import { useTheme } from '../theme/ThemeContext';
 import { deleteAccount } from './accountDeletion';
 import { useSupabaseAuth } from './SupabaseAuthContext';
@@ -51,17 +52,25 @@ export function ProfileMenu() {
         accessibilityLabel="프로필 메뉴"
         hitSlop={8}
       >
-        <Text style={styles.btnText}>👤</Text>
+        <Icon name="user" size={20} color={theme.text} />
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
         <Pressable style={styles.backdrop} onPress={close}>
           <Pressable style={styles.sheet} onPress={() => {}}>
-            <Text style={styles.email} numberOfLines={1}>
-              📧 {user?.email ?? '계정'}
-            </Text>
+            <View style={styles.emailRow}>
+              <Icon name="mail" size={15} color={theme.textMuted} />
+              <Text style={styles.email} numberOfLines={1}>
+                {user?.email ?? '계정'}
+              </Text>
+            </View>
 
-            {deleteError ? <Text style={styles.errorText}>⚠ {deleteError}</Text> : null}
+            {deleteError ? (
+              <View style={styles.errorRow}>
+                <Icon name="alert-triangle" size={14} color={theme.danger} />
+                <Text style={styles.errorText}>{deleteError}</Text>
+              </View>
+            ) : null}
 
             {confirmingDelete ? (
               <View style={styles.confirmBox}>
@@ -103,11 +112,12 @@ export function ProfileMenu() {
 
 function makeStyles(t: Theme) {
   return StyleSheet.create({
-    btn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: t.surfaceAlt },
-    btnText: { fontSize: 14 },
+    btn: { padding: space.sm, borderRadius: radius.sm, backgroundColor: t.surfaceAlt },
     backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-    sheet: { width: '100%', maxWidth: 320, backgroundColor: t.surface, borderRadius: 14, padding: 16, gap: 10 },
-    email: { fontSize: 14, color: t.text, fontWeight: '600' },
+    sheet: { width: '100%', maxWidth: 320, backgroundColor: t.surface, borderRadius: radius.lg, padding: space.lg, gap: space.md },
+    emailRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+    email: { flex: 1, fontSize: typeScale.sm, color: t.text, fontWeight: weight.body },
+    errorRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
     logoutBtn: { minHeight: 48, borderRadius: 10, backgroundColor: t.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
     logoutText: { color: t.text, fontWeight: '700', fontSize: 15 },
     closeBtn: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },

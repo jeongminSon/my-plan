@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { TextStyle, ViewStyle } from 'react-native';
-import { Theme } from '../../theme/theme';
+import { radius, Theme, weight } from '../../theme/theme';
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -34,7 +34,7 @@ export function makeAuthStyles(t: Theme) {
     // 주요 버튼: 가장 높은 대비(브랜드색은 버튼/강조에만)
     button: {
       minHeight: 48,
-      borderRadius: 10,
+      borderRadius: radius.md,
       backgroundColor: t.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -43,7 +43,7 @@ export function makeAuthStyles(t: Theme) {
       marginTop: 4,
     },
     buttonDisabled: { opacity: 0.6 },
-    buttonText: { color: t.onPrimary, fontSize: 16, fontWeight: '700' },
+    buttonText: { color: t.onPrimary, fontSize: 16, fontWeight: weight.label },
     // 상단 배너(오류/성공) — 색 + 아이콘 + 문구
     banner: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10 },
     bannerError: { backgroundColor: t.dangerBg },
@@ -58,7 +58,7 @@ export function makeAuthStyles(t: Theme) {
     dividerText: { color: t.textFaint, fontSize: 12 },
     googleBtn: {
       minHeight: 48,
-      borderRadius: 10,
+      borderRadius: radius.md,
       borderWidth: 1,
       borderColor: t.border,
       backgroundColor: t.bg,
@@ -67,24 +67,24 @@ export function makeAuthStyles(t: Theme) {
       flexDirection: 'row',
       gap: 8,
     },
-    googleBtnText: { color: t.text, fontSize: 15, fontWeight: '700' },
+    googleBtnText: { color: t.text, fontSize: 15, fontWeight: weight.label },
     // 6자리 코드 입력
     otpInput: {
       minHeight: 56,
-      borderRadius: 10,
+      borderRadius: radius.md,
       borderWidth: 1,
       borderColor: t.border,
       backgroundColor: t.bg,
       color: t.text,
       fontSize: 28,
-      fontWeight: '700',
+      fontWeight: weight.label,
       letterSpacing: 8,
       paddingHorizontal: 16,
     },
     // 링크
     linkRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' },
     linkMuted: { color: t.textMuted, fontSize: 14 },
-    link: { color: t.primary, fontSize: 14, fontWeight: '700' },
+    link: { color: t.primary, fontSize: 14, fontWeight: weight.label },
     // 비밀번호 강도
     strengthWrap: { gap: 4 },
     strengthBars: { flexDirection: 'row', gap: 4 },
@@ -104,7 +104,7 @@ export function makeAuthStyles(t: Theme) {
     checkboxChecked: { backgroundColor: t.primary, borderColor: t.primary },
     checkboxMark: { color: t.onPrimary, fontSize: 13, fontWeight: '900', lineHeight: 15 },
     consentText: { fontSize: 13, color: t.textMuted },
-    consentLink: { fontSize: 13, color: t.primary, fontWeight: '700' },
+    consentLink: { fontSize: 13, color: t.primary, fontWeight: weight.label },
     // 동의 모달
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
     modalCard: {
@@ -119,7 +119,7 @@ export function makeAuthStyles(t: Theme) {
       gap: 12,
     },
     privacyRow: { gap: 2, marginBottom: 8 },
-    privacyKey: { fontSize: 13, fontWeight: '700', color: t.text },
+    privacyKey: { fontSize: 13, fontWeight: weight.label, color: t.text },
     privacyVal: { fontSize: 13, color: t.textMuted, lineHeight: 18 },
   });
 }

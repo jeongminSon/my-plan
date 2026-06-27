@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Icon } from '../../components/Icon';
 import { Theme } from '../../theme/theme';
 import { useTheme } from '../../theme/ThemeContext';
 import { PressableState, webFocusRing, webInputReset } from './authStyles';
@@ -94,7 +95,7 @@ export function AuthField({
       </View>
       {error ? (
         <View style={styles.errorRow} accessibilityLiveRegion="polite">
-          <Text style={styles.errorIcon}>⚠</Text>
+          <Icon name="alert-triangle" size={12} color={theme.danger} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : null}

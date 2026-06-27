@@ -1,12 +1,13 @@
 import { memo, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Priority, RepeatRule, Task } from '../models/Task';
-import { Theme } from '../theme/theme';
+import { radius, space, Theme, typeScale, weight } from '../theme/theme';
 import { useTheme } from '../theme/ThemeContext';
 import { dueDateLabel, isOverdue } from '../utils/date';
 import { priorityColor, priorityLabel } from '../utils/priority';
 import { reminderLabel } from '../utils/reminder';
 import { repeatLabel } from '../utils/repeat';
+import { Icon, IconName } from './Icon';
 
 interface Props {
   task: Task;
@@ -22,6 +23,44 @@ interface Props {
   onAddSubtask?: (taskId: string, title: string) => void;
   onToggleSubtask?: (taskId: string, subtaskId: string) => void;
   onRemoveSubtask?: (taskId: string, subtaskId: string) => void;
+}
+
+type Styles = ReturnType<typeof makeStyles>;
+
+/** 메타 칩: 상태를 색만이 아니라 "형태(채움 vs 외곽선)"로 구분 + 아이콘 + 라벨. */
+function MetaChip({
+  icon,
+  label,
+  active,
+  activeColor,
+  onPress,
+  a11yLabel,
+  styles,
+  theme,
+}: {
+  icon: IconName;
+  label: string;
+  active: boolean;
+  activeColor?: string;
+  onPress: () => void;
+  a11yLabel: string;
+  styles: Styles;
+  theme: Theme;
+}) {
+  const color = active ? activeColor ?? theme.primary : theme.textFaint;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
+      style={[styles.chip, active ? styles.chipActive : styles.chipIdle]}
+    >
+      <Icon name={icon} size={13} color={color} />
+      <Text style={[styles.chipText, { color }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
 }
 
 function TaskItemBase(props: Props) {
@@ -65,9 +104,11 @@ function TaskItemBase(props: Props) {
           accessibilityRole="checkbox"
           accessibilityState={{ checked: task.completed }}
           accessibilityLabel={task.title}
-          hitSlop={8}
+          style={styles.checkTap}
         >
-          <Text style={styles.checkbox}>{task.completed ? '☑' : '☐'}</Text>
+          <View style={[styles.checkbox, task.completed && styles.checkboxDone]}>
+            {task.completed ? <Icon name="check" size={15} color={theme.onPrimary} /> : null}
+          </View>
         </Pressable>
 
         <View style={styles.main}>
@@ -89,57 +130,83 @@ function TaskItemBase(props: Props) {
 
           <View style={styles.metaRow}>
             {onCyclePriority ? (
-              <Pressable onPress={() => onCyclePriority(task.id, task.priority)} accessibilityLabel="우선순위 변경" hitSlop={6}>
-                <Text
-                  style={[styles.metaText, task.priority ? { color: accent, fontWeight: '700' } : undefined]}
-                  numberOfLines={1}
-                >
-                  {task.priority ? `⚑ ${priorityLabel(task.priority)}` : '⚑ 우선순위'}
-                </Text>
-              </Pressable>
+              <MetaChip
+                icon="flag"
+                label={task.priority ? priorityLabel(task.priority) : '우선순위'}
+                active={!!task.priority}
+                activeColor={accent}
+                onPress={() => onCyclePriority(task.id, task.priority)}
+                a11yLabel="우선순위 변경"
+                styles={styles}
+                theme={theme}
+              />
             ) : null}
             {onCycleList ? (
-              <Pressable onPress={() => onCycleList(task.id, task.listId)} accessibilityLabel="목록 변경" hitSlop={6}>
-                <Text style={styles.metaText} numberOfLines={1}>{listName ? `📁 ${listName}` : '📁 없음'}</Text>
-              </Pressable>
+              <MetaChip
+                icon="folder"
+                label={listName ?? '목록'}
+                active={!!listName}
+                onPress={() => onCycleList(task.id, task.listId)}
+                a11yLabel="목록 변경"
+                styles={styles}
+                theme={theme}
+              />
             ) : null}
             {onCycleRepeat ? (
-              <Pressable onPress={() => onCycleRepeat(task.id, task.repeat)} accessibilityLabel="반복 변경" hitSlop={6}>
-                <Text style={[styles.metaText, task.repeat && styles.metaActive]} numberOfLines={1}>
-                  {task.repeat ? `🔁 ${repeatLabel(task.repeat)}` : '🔁 반복'}
-                </Text>
-              </Pressable>
+              <MetaChip
+                icon="repeat"
+                label={task.repeat ? repeatLabel(task.repeat) : '반복'}
+                active={!!task.repeat}
+                onPress={() => onCycleRepeat(task.id, task.repeat)}
+                a11yLabel="반복 변경"
+                styles={styles}
+                theme={theme}
+              />
             ) : null}
             {onCycleReminder ? (
-              <Pressable onPress={() => onCycleReminder(task)} accessibilityLabel="알림 변경" hitSlop={6}>
-                <Text style={[styles.metaText, task.reminderAt != null && styles.metaActive]} numberOfLines={1}>
-                  {task.reminderAt != null ? `⏰ ${reminderLabel(task.reminderAt, now)}` : '⏰ 알림'}
-                </Text>
-              </Pressable>
+              <MetaChip
+                icon="bell"
+                label={task.reminderAt != null ? reminderLabel(task.reminderAt, now) : '알림'}
+                active={task.reminderAt != null}
+                onPress={() => onCycleReminder(task)}
+                a11yLabel="알림 변경"
+                styles={styles}
+                theme={theme}
+              />
             ) : null}
             {onAddSubtask ? (
-              <Pressable onPress={() => setExpanded((e) => !e)} accessibilityLabel="하위 할일" hitSlop={6}>
-                <Text style={[styles.metaText, subs.length > 0 && styles.metaActive]} numberOfLines={1}>
-                  {subs.length > 0 ? `☑ ${subDone}/${subs.length}` : '☑ 하위'}
-                </Text>
-              </Pressable>
+              <MetaChip
+                icon="check-square"
+                label={subs.length > 0 ? `${subDone}/${subs.length}` : '하위'}
+                active={subs.length > 0}
+                onPress={() => setExpanded((e) => !e)}
+                a11yLabel="하위 할일"
+                styles={styles}
+                theme={theme}
+              />
             ) : null}
           </View>
         </View>
 
         <Pressable
           onPress={() => onCycleDue(task.id, task.dueDate)}
+          accessibilityRole="button"
           accessibilityLabel="마감일 변경"
-          hitSlop={8}
           style={[styles.dueChip, overdue && styles.dueChipOverdue]}
         >
           {task.dueDate != null ? (
-            <Text style={[styles.dueText, overdue && styles.dueTextOverdue]}>
-              {dueDateLabel(task.dueDate, now)}
-              {overdue ? ' 지남' : ''}
-            </Text>
+            <>
+              {overdue ? <Icon name="alert-triangle" size={12} color={theme.danger} /> : null}
+              <Text style={[styles.dueText, overdue && styles.dueTextOverdue]}>
+                {dueDateLabel(task.dueDate, now)}
+                {overdue ? ' 지남' : ''}
+              </Text>
+            </>
           ) : (
-            <Text style={styles.duePlaceholder}>＋날짜</Text>
+            <>
+              <Icon name="calendar" size={12} color={theme.textFaint} />
+              <Text style={styles.duePlaceholder}>날짜</Text>
+            </>
           )}
         </Pressable>
       </View>
@@ -152,15 +219,23 @@ function TaskItemBase(props: Props) {
                 onPress={() => onToggleSubtask?.(task.id, s.id)}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: s.completed }}
-                hitSlop={6}
+                accessibilityLabel={s.title}
+                style={styles.subCheckTap}
               >
-                <Text style={styles.subCheck}>{s.completed ? '☑' : '☐'}</Text>
+                <View style={[styles.subCheckbox, s.completed && styles.checkboxDone]}>
+                  {s.completed ? <Icon name="check" size={12} color={theme.onPrimary} /> : null}
+                </View>
               </Pressable>
               <Text style={[styles.subTitle, s.completed && styles.completed]} numberOfLines={1}>
                 {s.title}
               </Text>
-              <Pressable onPress={() => onRemoveSubtask?.(task.id, s.id)} accessibilityLabel="하위 할일 삭제" hitSlop={6}>
-                <Text style={styles.subRemove}>✕</Text>
+              <Pressable
+                onPress={() => onRemoveSubtask?.(task.id, s.id)}
+                accessibilityRole="button"
+                accessibilityLabel="하위 할일 삭제"
+                style={styles.subRemoveTap}
+              >
+                <Icon name="x" size={16} color={theme.textFaint} />
               </Pressable>
             </View>
           ))}
@@ -175,8 +250,13 @@ function TaskItemBase(props: Props) {
               returnKeyType="done"
               blurOnSubmit={false}
             />
-            <Pressable onPress={submitSub} accessibilityLabel="하위 할일 추가 확인" hitSlop={6}>
-              <Text style={styles.subAdd}>＋</Text>
+            <Pressable
+              onPress={submitSub}
+              accessibilityRole="button"
+              accessibilityLabel="하위 할일 추가 확인"
+              style={styles.subAddTap}
+            >
+              <Icon name="plus" size={20} color={theme.primary} />
             </Pressable>
           </View>
         </View>
@@ -195,36 +275,82 @@ function makeStyles(t: Theme) {
       borderBottomColor: t.border,
       backgroundColor: t.bg,
     },
-    row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 14 },
-    checkbox: { fontSize: 22, marginRight: 12, color: t.text },
-    main: { flex: 1, paddingRight: 8 },
-    title: { fontSize: 16, color: t.text },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: space.sm,
+      paddingHorizontal: space.md,
+    },
+    // 원형 체크박스 + 44px 탭 타깃
+    checkTap: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -space.sm },
+    checkbox: {
+      width: 24,
+      height: 24,
+      borderRadius: radius.pill,
+      borderWidth: 2,
+      borderColor: t.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxDone: { backgroundColor: t.primary, borderColor: t.primary },
+    main: { flex: 1, paddingRight: space.sm },
+    title: { fontSize: typeScale.md, color: t.text, fontWeight: weight.body },
     completed: { textDecorationLine: 'line-through', color: t.textFaint },
-    memo: { fontSize: 13, color: t.textMuted, marginTop: 2 },
-    metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 },
-    metaText: { fontSize: 12, color: t.textMuted },
-    metaActive: { color: t.primary, fontWeight: '600' },
-    dueChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, backgroundColor: t.surfaceAlt },
+    memo: { fontSize: typeScale.sm, color: t.textMuted, marginTop: 2 },
+    metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.sm },
+    // 메타 칩(형태로 상태 구분)
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.xs,
+      minHeight: 36,
+      paddingHorizontal: space.md,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+    },
+    chipIdle: { borderColor: t.brandBorder, backgroundColor: 'transparent' },
+    chipActive: { borderColor: t.brandTint, backgroundColor: t.brandTint },
+    chipText: { fontSize: typeScale.sm, fontWeight: weight.label },
+    // 마감 칩
+    dueChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.xs,
+      minHeight: 36,
+      paddingHorizontal: space.md,
+      borderRadius: radius.pill,
+      backgroundColor: t.surfaceAlt,
+    },
     dueChipOverdue: { backgroundColor: t.dangerBg },
-    dueText: { fontSize: 12, color: t.textMuted, fontWeight: '600' },
+    dueText: { fontSize: typeScale.xs, color: t.textMuted, fontWeight: weight.label },
     dueTextOverdue: { color: t.danger },
-    duePlaceholder: { fontSize: 12, color: t.textFaint },
-    subList: { paddingLeft: 46, paddingRight: 14, paddingBottom: 10, gap: 6 },
-    subRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    subCheck: { fontSize: 18, color: t.text },
-    subTitle: { flex: 1, fontSize: 14, color: t.text },
-    subRemove: { fontSize: 14, color: t.textFaint },
+    duePlaceholder: { fontSize: typeScale.xs, color: t.textFaint },
+    // 하위 할일
+    subList: { paddingLeft: 44, paddingRight: space.md, paddingBottom: space.sm, gap: space.sm },
+    subRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+    subCheckTap: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginLeft: -space.sm },
+    subCheckbox: {
+      width: 20,
+      height: 20,
+      borderRadius: radius.pill,
+      borderWidth: 2,
+      borderColor: t.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    subTitle: { flex: 1, fontSize: typeScale.sm, color: t.text },
+    subRemoveTap: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
     subInput: {
       flex: 1,
       borderWidth: 1,
       borderColor: t.border,
-      borderRadius: 8,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      fontSize: 14,
+      borderRadius: radius.sm,
+      paddingHorizontal: space.md,
+      paddingVertical: space.sm,
+      fontSize: typeScale.sm,
       color: t.text,
       backgroundColor: t.surface,
     },
-    subAdd: { fontSize: 22, color: t.primary, paddingHorizontal: 4 },
+    subAddTap: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   });
 }

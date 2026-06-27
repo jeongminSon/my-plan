@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Icon } from '../../components/Icon';
 import { supabase } from '../../supabase/client';
 import { Theme } from '../../theme/theme';
 import { useTheme } from '../../theme/ThemeContext';
@@ -138,13 +139,13 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
 
           {otpError ? (
             <View style={[s.banner, s.bannerError]} accessibilityLiveRegion="polite">
-              <Text style={s.bannerIconError}>⚠</Text>
+              <Icon name="alert-triangle" size={16} color={theme.danger} />
               <Text style={s.bannerTextError}>{otpError}</Text>
             </View>
           ) : null}
           {resent ? (
             <View style={[s.banner, s.bannerSuccess]} accessibilityLiveRegion="polite">
-              <Text style={s.bannerIconSuccess}>✓</Text>
+              <Icon name="check-circle" size={16} color={theme.success} />
               <Text style={s.bannerTextSuccess}>코드를 다시 보냈어요. 메일함을 확인해 주세요.</Text>
             </View>
           ) : null}
@@ -277,7 +278,7 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
               webFocusRing((st as PressableState).focused ?? false, theme.primary),
             ]}
           >
-            {agreed ? <Text style={s.checkboxMark}>✓</Text> : null}
+            {agreed ? <Icon name="check" size={14} color={theme.onPrimary} /> : null}
           </Pressable>
           <Text style={s.consentText}>(필수) </Text>
           <Pressable
