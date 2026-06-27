@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AuthGate } from './src/auth/AuthGate';
 import { AuthScreen } from './src/auth/screens/AuthScreen';
+import { NewPasswordScreen } from './src/auth/screens/NewPasswordScreen';
 import { SupabaseAuthProvider, useSupabaseAuth } from './src/auth/SupabaseAuthContext';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { taskRepository } from './src/data/db';
@@ -32,12 +33,18 @@ export default function App() {
 
 function ThemedRoot() {
   const theme = useTheme();
+  const { passwordRecovery } = useSupabaseAuth();
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
-      <AuthGate fallback={<AuthScreen />}>
-        <AppData />
-      </AuthGate>
+      {passwordRecovery ? (
+        // 비밀번호 재설정 링크로 복귀 → 새 비밀번호 설정(세션 있어도 우선)
+        <NewPasswordScreen />
+      ) : (
+        <AuthGate fallback={<AuthScreen />}>
+          <AppData />
+        </AuthGate>
+      )}
     </SafeAreaView>
   );
 }

@@ -10,6 +10,7 @@ import { makeAuthStyles, PressableState, webFocusRing } from './authStyles';
 
 interface Props {
   onSwitchToSignup: () => void;
+  onSwitchToReset: () => void;
 }
 
 /**
@@ -19,7 +20,7 @@ interface Props {
  * - 네트워크 오류는 별도 안내
  * - 성공 시 세션이 생기면 AuthGate가 자동으로 앱으로 전환(별도 네비게이션 불필요)
  */
-export function LoginScreen({ onSwitchToSignup }: Props) {
+export function LoginScreen({ onSwitchToSignup, onSwitchToReset }: Props) {
   const theme = useTheme();
   const s = useMemo(() => makeAuthStyles(theme), [theme]);
   const [email, setEmail] = useState('');
@@ -149,8 +150,14 @@ export function LoginScreen({ onSwitchToSignup }: Props) {
           </Pressable>
         </View>
         <View style={s.linkRow}>
-          {/* 다음 단계 예정 — 자리만 */}
-          <Text style={[s.linkMuted, { opacity: 0.5 }]}>비밀번호 찾기 (준비 중)</Text>
+          <Pressable
+            onPress={onSwitchToReset}
+            accessibilityRole="link"
+            disabled={submitting || googleBusy}
+            style={(st) => webFocusRing((st as PressableState).focused ?? false, theme.primary)}
+          >
+            <Text style={s.link}>비밀번호 찾기</Text>
+          </Pressable>
         </View>
       </View>
     </ScrollView>

@@ -14,6 +14,9 @@ interface SupabaseAuthValue {
   session: Session | null;
   loading: boolean;
   configured: boolean;
+  /** 비밀번호 재설정 링크로 복귀한 상태(새 비밀번호 설정 화면을 띄움) */
+  passwordRecovery: boolean;
+  clearPasswordRecovery: () => void;
   signOut: () => Promise<void>;
 }
 
@@ -22,6 +25,7 @@ const Ctx = createContext<SupabaseAuthValue | undefined>(undefined);
 export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
     if (!supabase) {
@@ -37,10 +41,11 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    // 2) 로그인/로그아웃/토큰갱신 자동 반영
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    // 2) 로그인/로그아웃/토큰갱신/비밀번호복구 자동 반영
+    const { data: sub } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
       setLoading(false);
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true);
     });
 
     return () => {
@@ -56,11 +61,15 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     await clearLocalCacheOnLogout(userId);
   }, [session]);
 
+  const clearPasswordRecovery = useCallback(() => setPasswordRecovery(false), []);
+
   const value: SupabaseAuthValue = {
     user: session?.user ?? null,
     session,
     loading,
     configured: isSupabaseConfigured(),
+    passwordRecovery,
+    clearPasswordRecovery,
     signOut,
   };
 

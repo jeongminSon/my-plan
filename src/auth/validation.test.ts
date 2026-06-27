@@ -5,8 +5,26 @@ import {
   isValidPassword,
   passwordStrength,
   strengthLabel,
+  validateNewPassword,
   validateSignup,
 } from './validation';
+
+describe('validateNewPassword (재설정)', () => {
+  it('정책 미달 비밀번호 → password 오류', () => {
+    const e = validateNewPassword({ password: 'short1', confirm: 'short1' });
+    expect(e.password).toBeTruthy();
+    expect(e.confirm).toBeUndefined();
+  });
+  it('확인 불일치 → confirm 오류', () => {
+    const e = validateNewPassword({ password: 'abcd1234', confirm: 'abcd9999' });
+    expect(e.password).toBeUndefined();
+    expect(e.confirm).toBeTruthy();
+  });
+  it('유효하고 일치 → 오류 없음', () => {
+    const e = validateNewPassword({ password: 'abcd1234', confirm: 'abcd1234' });
+    expect(hasErrors(e)).toBe(false);
+  });
+});
 
 describe('isValidEmail', () => {
   it('형식 검증', () => {

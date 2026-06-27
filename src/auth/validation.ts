@@ -52,6 +52,15 @@ export function hasErrors(errors: SignupErrors): boolean {
   return Boolean(errors.email || errors.password || errors.confirm);
 }
 
+/** 새 비밀번호(재설정) 폼 검증 — 비밀번호 정책 + 확인 일치 */
+export function validateNewPassword(input: { password: string; confirm: string }): SignupErrors {
+  const errors: SignupErrors = {};
+  if (!isValidPassword(input.password))
+    errors.password = '비밀번호는 8자 이상이며 영문과 숫자를 포함해야 합니다.';
+  if (input.confirm !== input.password) errors.confirm = '비밀번호가 일치하지 않습니다.';
+  return errors;
+}
+
 /** 네트워크 오류 여부(서버 오류와 구분해 별도 안내) */
 export function isNetworkError(e: unknown): boolean {
   const msg =
