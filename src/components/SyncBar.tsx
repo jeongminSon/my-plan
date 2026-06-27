@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { APP_VERSION } from '../appInfo';
 import { SyncStore } from '../sync/SyncStore';
 import { syncNow } from '../sync/SyncService';
 import { getOrCreateUserKey, setUserKey } from '../sync/syncSettings';
@@ -71,6 +72,7 @@ export function SyncBar({ store, onSynced }: Props) {
         <Pressable onPress={() => setExpanded((e) => !e)} accessibilityLabel="동기화 코드" hitSlop={8}>
           <Text style={styles.codeToggle}>{expanded ? '닫기' : '코드'}</Text>
         </Pressable>
+        <Text style={styles.version}>v{APP_VERSION}</Text>
       </View>
 
       {expanded ? (
@@ -106,6 +108,7 @@ function makeStyles(t: Theme) {
     syncBtnText: { color: t.primary, fontWeight: '700', fontSize: 13 },
     status: { flex: 1, color: t.textMuted, fontSize: 12 },
     codeToggle: { color: t.textMuted, fontSize: 12, fontWeight: '600' },
+    version: { color: t.textFaint, fontSize: 11 },
     panel: { marginTop: 10, padding: 12, backgroundColor: t.surface, borderRadius: 10, gap: 6 },
     panelLabel: { color: t.textMuted, fontSize: 12 },
     codeBox: {
