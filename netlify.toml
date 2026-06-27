@@ -1,19 +1,15 @@
-# Netlify 배포 설정 — Expo 웹(정적) + 동기화 Function
+# Netlify 배포 설정 — Expo 웹(정적)
 
 [build]
   command = "npm run build:web"
   publish = "dist"
 
-# 구글 OAuth 클라이언트 ID는 비밀이 아니라 클라이언트에 내장되는 공개값이다.
-# Netlify 비밀 스캐너가 오탐하지 않도록 해당 키를 스캔에서 제외한다.
+# 공개 클라이언트 값(구글 OAuth 클라이언트 ID, Supabase anon 키)은 비밀이 아니라
+# 클라이언트에 내장된다. Netlify 비밀 스캐너가 오탐하지 않도록 스캔에서 제외한다.
 [build.environment]
-  SECRETS_SCAN_OMIT_KEYS = "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,GOOGLE_ALLOWED_AUDIENCES,EXPO_PUBLIC_SYNC_URL,EXPO_PUBLIC_SUPABASE_URL,EXPO_PUBLIC_SUPABASE_ANON_KEY"
+  SECRETS_SCAN_OMIT_KEYS = "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,GOOGLE_ALLOWED_AUDIENCES,EXPO_PUBLIC_SUPABASE_URL,EXPO_PUBLIC_SUPABASE_ANON_KEY"
 
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"
-
-# SPA 라우팅: 모든 경로를 index.html로 (함수 경로 /.netlify/functions/* 는 Netlify가 먼저 처리)
+# SPA 라우팅: 모든 경로를 index.html로
 [[redirects]]
   from = "/*"
   to = "/index.html"
