@@ -142,7 +142,7 @@ my-plan/
 > 알림 동작 차이(정직하게): 네이티브는 OS가 예약을 관리해 앱이 꺼져 있어도 전달된다.
 > 웹은 서비스워커 없이 `setTimeout`으로 예약하므로 탭이 열려 있는 동안에만 동작한다.
 
-> 동기화(클라우드)는 설계·로컬 준비(S1)까지 완료, 백엔드 연결은 다음 증분. 자세한 내용은 개인정보 처리방침 참고.
+> 클라우드 인증·동기화는 **Supabase**로 동작한다(이메일/비밀번호 + 6자리 코드 인증 + 구글 OAuth, 사용자별 데이터 RLS 보호). 첫 로그인 시 로컬 데이터를 클라우드로 1회 이전한다. Supabase 환경변수가 없으면 **로컬 전용 모드**로 동작한다(로그인 없음).
 
 ## 빌드 · 배포
 
@@ -168,30 +168,31 @@ eas submit --platform ios      # App Store 제출
 ### 품질 게이트(배포 전 실행)
 ```bash
 npx tsc --noEmit   # 타입 체크
-npm test           # 단위 테스트 (69개)
+npm test           # 단위 테스트 (75개)
 npm run build:web  # 웹 번들(dist) 무결성 확인
 ```
 
-## Netlify 웹 배포 + 동기화 서버
-웹 앱과 **동기화 서버(Netlify Function)** 를 한 사이트에 함께 배포한다.
+## Netlify 웹 배포
+웹 앱(정적 Expo 웹 빌드)을 Netlify에 배포한다. 클라우드 데이터/인증은 Supabase가 담당한다(아래 참고).
 
-- `netlify.toml`: 빌드 `npm run build:web` → 퍼블리시 `dist`, 함수 디렉토리 `netlify/functions`
-- 동기화 서버: `netlify/functions/sync.mjs` (Netlify Blobs 저장, 서버측 LWW, `x-sync-key`로 사용자 격리, HTTPS 자동)
-- 동기화 클라이언트: `src/sync/HttpRemote.ts` → `src/sync/SyncEngine.ts`(LWW)
+- `netlify.toml`: 빌드 `npm run build:web` → 퍼블리시 `dist`, SPA 라우팅(`/* → /index.html`)
+- 환경변수(Netlify → Site settings → Environment variables): `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (공개 anon 키 — RLS로 보호). 미설정 시 로컬 전용 모드.
 
 ### 배포 방법(택1)
 1. **GitHub 연동(권장)**: Netlify에서 이 저장소를 연결하면 푸시할 때마다 자동 빌드·배포
-2. **드래그&드롭**: `npm run build:web` 후 `dist/` 폴더를 Netlify에 끌어다 놓기 (단, 이 경우 Function은 별도 배포 필요)
+2. **드래그&드롭**: `npm run build:web` 후 `dist/` 폴더를 Netlify에 끌어다 놓기
 
-### 동기화 사용
-- 앱의 **⟳ 동기화** 버튼 → 서버와 push/pull. 충돌은 최신 변경 우선(LWW).
-- **코드** 패널의 동기화 코드를 다른 기기에 입력하면 같은 데이터를 공유(익명 키, 개인정보 없음).
-- **웹**: 같은 사이트의 함수를 자동 사용(상대경로).
-- **네이티브(Android/iOS)**: 빌드 시 서버 주소를 주입한다.
-  ```bash
-  # 예: Netlify 사이트가 https://my-plan.netlify.app 인 경우
-  EXPO_PUBLIC_SYNC_URL=https://my-plan.netlify.app/.netlify/functions/sync eas build -p android --profile preview
-  ```
+## 클라우드 인증·동기화 (Supabase)
+로그인·사용자별 데이터·동기화는 **Supabase**로 동작한다.
+
+- **인증**: Supabase Auth — 이메일/비밀번호 + **6자리 코드 이메일 인증**(OTP) + **구글 OAuth**. 중복 가입은 `email_exists` 함수로 사전 차단.
+- **데이터**: 사용자별 `todos`/`lists` 테이블(Supabase Postgres) + **RLS**로 타 사용자 접근 차단. 스키마는 [`supabase/schema.sql`](supabase/schema.sql).
+- **마이그레이션**: 첫 로그인 시 로컬 데이터를 클라우드로 1회 이전(백업 → 업로드 → 검증 후 로컬 정리, 멱등). 실패해도 데이터 보존 + 건너뛰기 가능.
+- **계정 삭제**: 본인 데이터 파기 + Edge Function([`supabase/functions/delete-account`](supabase/functions/delete-account))으로 인증 계정까지 삭제.
+- **설정 위치**: `.env`(로컬 개발) · Netlify env(웹) · EAS env(앱 빌드/OTA)에 `EXPO_PUBLIC_SUPABASE_URL`·`EXPO_PUBLIC_SUPABASE_ANON_KEY` 지정.
+- **관련 코드**: `src/supabase/client.ts`, `src/data/supabaseRepository.ts`, `src/auth/*`, `src/migration/*`.
+
+> ⚠️ `service_role` 키는 절대 프런트/저장소에 두지 않는다(서버 전용, RLS 우회 가능). 프런트는 공개 anon 키만 사용한다.
 
 ## Android APK (폰에서 테스트)
 EAS로 설치형 APK를 만든다(무료 Expo 계정 필요, 빌드는 클라우드에서 수행).
@@ -201,7 +202,7 @@ eas login                                   # 최초 1회 (본인 Expo 계정)
 eas build -p android --profile preview      # APK 빌드 → 완료되면 다운로드 링크 제공
 ```
 - `eas.json`의 `preview` 프로필이 **APK(buildType: apk)** 를 만들어 폰에 바로 설치 가능.
-- 동기화까지 쓰려면 위 `EXPO_PUBLIC_SYNC_URL` 을 함께 지정.
+- 로그인·클라우드 동기화까지 쓰려면 **EAS 환경변수**에 `EXPO_PUBLIC_SUPABASE_URL`·`EXPO_PUBLIC_SUPABASE_ANON_KEY` 를 등록한다(`eas.json`의 `environment` 프로필이 참조). 미설정 시 앱은 로컬 전용으로 동작.
 - 빠른 확인만 원하면 `npx expo start` 후 **Expo Go** 앱으로 QR 스캔(로컬 알림 등 일부 제약).
 
 ### 문서
@@ -209,5 +210,6 @@ eas build -p android --profile preview      # APK 빌드 → 완료되면 다운
 - 스토어 등록 정보: [`docs/STORE.md`](docs/STORE.md)
 
 ## 향후 확장 여지
-- 동기화 인증을 익명 코드 → OAuth(구글/애플)로 강화(S3)
+- 애플 로그인(iOS) 추가, 운영용 메일 발송(커스텀 SMTP) 안정화
+- 오프라인 우선 캐시(클라우드 미연결 시 로컬, 재연결 시 머지)
 - 정확한 날짜/시간 선택 UI, 드래그로 순서 변경, 위젯
