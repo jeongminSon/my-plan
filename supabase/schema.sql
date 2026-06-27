@@ -4,14 +4,14 @@
 
 -- 1) todos 테이블 (앱의 Task 모델 반영)
 create table if not exists public.todos (
-  id          uuid primary key default gen_random_uuid(),
+  id          text primary key,            -- 앱이 생성하는 문자열 id(UUID 아님)
   user_id     uuid not null references auth.users(id) on delete cascade,
   title       text not null,
   memo        text,
   due_date    timestamptz,
   completed   boolean not null default false,
   sort_order  double precision not null default 0,
-  list_id     uuid,
+  list_id     text,
   priority    text check (priority in ('high','med','low')),
   repeat      text check (repeat in ('daily','weekly','monthly')),
   reminder_at timestamptz,
@@ -60,7 +60,7 @@ create trigger todos_set_updated_at
 -- 5) lists 테이블 (목록/프로젝트) — 회귀 방지(로그인 후에도 목록 기능 동작)
 -- ============================================================
 create table if not exists public.lists (
-  id         uuid primary key default gen_random_uuid(),
+  id         text primary key,             -- 앱이 생성하는 문자열 id
   user_id    uuid not null references auth.users(id) on delete cascade,
   name       text not null,
   sort_order double precision not null default 0,
