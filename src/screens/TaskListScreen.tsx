@@ -1,0 +1,271 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ListBar, ListFilter } from '../components/ListBar';
+import { TaskItem } from '../components/TaskItem';
+import { TaskRepository } from '../data/taskRepository';
+import { Priority, RepeatRule, Task } from '../models/Task';
+import { TaskList } from '../models/TaskList';
+import { NotificationService } from '../services/NotificationService';
+import { applyReminder } from '../services/reminderCoordinator';
+import { logger } from '../services/logger';
+import { Theme } from '../theme/theme';
+import { useTheme, useThemePreference } from '../theme/ThemeContext';
+import { dueDateLabel, nextDueDate } from '../utils/date';
+import { nextListId } from '../utils/lists';
+import { nextPriority } from '../utils/priority';
+import { nextReminder } from '../utils/reminder';
+import { nextRepeat } from '../utils/repeat';
+import { computeStats } from '../utils/stats';
+import { selectAllTasks, selectTodayTasks, todayProgress } from '../utils/todayView';
+
+interface Props {
+  repository: TaskRepository;
+  notifications: NotificationService;
+}
+
+type ViewMode = 'today' | 'all';
+
+export function TaskListScreen({ repository, notifications }: Props) {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const { preference, setPreference } = useThemePreference();
+
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [lists, setLists] = useState<TaskList[]>([]);
+  const [listFilter, setListFilter] = useState<ListFilter>('all');
+  const [title, setTitle] = useState('');
+  const [addDue, setAddDue] = useState<number | undefined>(undefined);
+  const [view, setView] = useState<ViewMode>('today');
+  const [loading, setLoading] = useState(true);
+  const [initError, setInitError] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+  const now = Date.now();
+
+  const reload = useCallback(async () => {
+    const [t, l] = await Promise.all([repository.getAll(), repository.getLists()]);
+    setTasks(t);
+    setLists(l);
+  }, [repository]);
+
+  const bootstrap = useCallback(async () => {
+    setInitError(false);
+    setLoading(true);
+    try {
+      await repository.init();
+      await reload();
+    } catch (e) {
+      logger.error(e instanceof Error ? e.message : String(e), 'init');
+      setInitError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [repository, reload]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (alive) await bootstrap();
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [bootstrap]);
+
+  const handleAdd = useCallback(async () => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    const listId = listFilter === 'all' ? undefined : listFilter;
+    await repository.add({ title: trimmed, dueDate: addDue, listId });
+    setTitle('');
+    setAddDue(undefined);
+    await reload();
+    inputRef.current?.focus();
+  }, [title, addDue, listFilter, repository, reload]);
+
+  const handleToggle = useCallback(async (id: string) => { await repository.toggleComplete(id); await reload(); }, [repository, reload]);
+  const handleDelete = useCallback(async (id: string) => { await repository.remove(id); await reload(); }, [repository, reload]);
+  const handleCycleDue = useCallback(async (id: string, c: number | undefined) => { await repository.setDueDate(id, nextDueDate(c, now)); await reload(); }, [repository, reload, now]);
+  const handleCycleList = useCallback(async (id: string, c: string | undefined) => { await repository.setTaskList(id, nextListId(c, lists)); await reload(); }, [repository, reload, lists]);
+  const handleCycleRepeat = useCallback(async (id: string, c: RepeatRule | undefined) => { await repository.setRepeat(id, nextRepeat(c)); await reload(); }, [repository, reload]);
+  const handleCyclePriority = useCallback(async (id: string, c: Priority | undefined) => { await repository.setPriority(id, nextPriority(c)); await reload(); }, [repository, reload]);
+  const handleAddSubtask = useCallback(async (taskId: string, t: string) => { await repository.addSubtask(taskId, t); await reload(); }, [repository, reload]);
+  const handleToggleSubtask = useCallback(async (taskId: string, sid: string) => { await repository.toggleSubtask(taskId, sid); await reload(); }, [repository, reload]);
+  const handleRemoveSubtask = useCallback(async (taskId: string, sid: string) => { await repository.removeSubtask(taskId, sid); await reload(); }, [repository, reload]);
+
+  const handleCycleReminder = useCallback(
+    async (task: Task) => {
+      const result = await applyReminder({ service: notifications, repository, task, reminderAt: nextReminder(task.reminderAt, Date.now()) });
+      if (result.permissionDenied) logger.warn('알림 권한 거부 — 알림 미예약', 'reminder');
+      await reload();
+    },
+    [notifications, repository, reload]
+  );
+
+  const handleAddList = useCallback(async (name: string) => { await repository.addList(name); await reload(); }, [repository, reload]);
+  const handleRenameList = useCallback(async (id: string, name: string) => { await repository.renameList(id, name); await reload(); }, [repository, reload]);
+  const handleRemoveList = useCallback(async (id: string) => { await repository.removeList(id); if (listFilter === id) setListFilter('all'); await reload(); }, [repository, reload, listFilter]);
+
+  const cycleTheme = () => setPreference(preference === 'system' ? 'light' : preference === 'light' ? 'dark' : 'system');
+  const themeBtn = preference === 'system' ? '🌗 시스템' : preference === 'light' ? '☀️ 라이트' : '🌙 다크';
+
+  if (initError) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorTitle}>불러오지 못했어요</Text>
+        <Text style={styles.errorBody}>저장소를 여는 중 문제가 발생했습니다.</Text>
+        <Pressable style={styles.retryBtn} onPress={bootstrap} accessibilityRole="button">
+          <Text style={styles.retryText}>다시 시도</Text>
+        </Pressable>
+      </View>
+    );
+  }
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={theme.primary} />
+      </View>
+    );
+  }
+
+  const byList = listFilter === 'all' ? tasks : tasks.filter((t) => t.listId === listFilter);
+  const progress = todayProgress(byList, now);
+  const stats = computeStats(byList, now);
+  const visible = view === 'today' ? selectTodayTasks(byList, now) : selectAllTasks(byList);
+  const todayPct = Math.round(stats.today.rate * 100);
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.flex1}>
+          <Text style={styles.headerTitle}>할일</Text>
+          <Text style={styles.count}>오늘 {progress.total}개 중 {progress.done}개 완료</Text>
+        </View>
+        <View style={styles.headerRight}>
+          <Pressable onPress={cycleTheme} style={styles.themeBtn} accessibilityLabel={`테마: ${themeBtn}`}>
+            <Text style={styles.themeBtnText}>{themeBtn}</Text>
+          </Pressable>
+          <View style={styles.toggle}>
+            <ViewToggleButton styles={styles} label="오늘" active={view === 'today'} onPress={() => setView('today')} />
+            <ViewToggleButton styles={styles} label="전체" active={view === 'all'} onPress={() => setView('all')} />
+          </View>
+        </View>
+      </View>
+
+      {/* 진행 통계 카드 */}
+      <View style={styles.statsCard}>
+        <View style={styles.statCell}>
+          <Text style={styles.statValue}>{todayPct}%</Text>
+          <Text style={styles.statLabel}>오늘 완료율</Text>
+          <View style={styles.bar}>
+            <View style={[styles.barFill, { width: `${todayPct}%` }]} />
+          </View>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statCell}>
+          <Text style={styles.statValue}>{stats.weekDone}</Text>
+          <Text style={styles.statLabel}>이번 주 완료</Text>
+        </View>
+      </View>
+
+      <ListBar
+        lists={lists}
+        selected={listFilter}
+        onSelect={setListFilter}
+        onAddList={handleAddList}
+        onRenameList={handleRenameList}
+        onRemoveList={handleRemoveList}
+      />
+
+      <View style={styles.addBar}>
+        <TextInput
+          ref={inputRef}
+          style={styles.input}
+          placeholder="새 할일을 입력하세요"
+          placeholderTextColor={theme.textFaint}
+          value={title}
+          onChangeText={setTitle}
+          onSubmitEditing={handleAdd}
+          returnKeyType="done"
+          blurOnSubmit={false}
+          autoFocus
+        />
+        <Pressable style={styles.dueToggle} onPress={() => setAddDue((cur) => nextDueDate(cur, now))} accessibilityLabel="새 할일 마감일">
+          <Text style={styles.dueToggleText}>📅 {addDue != null ? dueDateLabel(addDue, now) : '없음'}</Text>
+        </Pressable>
+        <Pressable style={styles.addBtn} onPress={handleAdd} accessibilityRole="button">
+          <Text style={styles.addBtnText}>추가</Text>
+        </Pressable>
+      </View>
+
+      <FlatList
+        data={visible}
+        keyExtractor={(t) => t.id}
+        renderItem={({ item }) => (
+          <TaskItem
+            task={item}
+            now={now}
+            onToggle={handleToggle}
+            onDelete={handleDelete}
+            onCycleDue={handleCycleDue}
+            listName={lists.find((l) => l.id === item.listId)?.name}
+            onCycleList={lists.length > 0 ? handleCycleList : undefined}
+            onCycleRepeat={handleCycleRepeat}
+            onCycleReminder={handleCycleReminder}
+            onCyclePriority={handleCyclePriority}
+            onAddSubtask={handleAddSubtask}
+            onToggleSubtask={handleToggleSubtask}
+            onRemoveSubtask={handleRemoveSubtask}
+          />
+        )}
+        ListEmptyComponent={
+          <Text style={styles.empty}>{view === 'today' ? '오늘 할 일이 없습니다. 추가해 보세요.' : '할일이 없습니다.'}</Text>
+        }
+      />
+    </View>
+  );
+}
+
+function ViewToggleButton({ styles, label, active, onPress }: { styles: ReturnType<typeof makeStyles>; label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={[styles.toggleBtn, active && styles.toggleBtnActive]} accessibilityRole="button">
+      <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
+    flex1: { flex: 1 },
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bg, padding: 24 },
+    header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 },
+    headerTitle: { fontSize: 28, fontWeight: '700', color: t.text },
+    count: { fontSize: 14, color: t.textMuted, marginTop: 4 },
+    headerRight: { alignItems: 'flex-end', gap: 6 },
+    themeBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: t.surfaceAlt },
+    themeBtnText: { fontSize: 12, color: t.textMuted, fontWeight: '600' },
+    toggle: { flexDirection: 'row', backgroundColor: t.surfaceAlt, borderRadius: 10, padding: 2 },
+    toggleBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
+    toggleBtnActive: { backgroundColor: t.bg },
+    toggleText: { fontSize: 14, color: t.textMuted },
+    toggleTextActive: { color: t.text, fontWeight: '700' },
+    statsCard: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, padding: 14, backgroundColor: t.surface, borderRadius: 12 },
+    statCell: { flex: 1 },
+    statDivider: { width: StyleSheet.hairlineWidth, backgroundColor: t.border, marginHorizontal: 12 },
+    statValue: { fontSize: 24, fontWeight: '800', color: t.text },
+    statLabel: { fontSize: 12, color: t.textMuted, marginTop: 2 },
+    bar: { height: 6, borderRadius: 3, backgroundColor: t.surfaceAlt, marginTop: 8, overflow: 'hidden' },
+    barFill: { height: 6, borderRadius: 3, backgroundColor: t.primary },
+    addBar: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+    input: { flex: 1, borderWidth: 1, borderColor: t.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: t.text, backgroundColor: t.bg },
+    dueToggle: { justifyContent: 'center', paddingHorizontal: 12, borderRadius: 8, backgroundColor: t.surfaceAlt },
+    dueToggleText: { fontSize: 13, color: t.textMuted, fontWeight: '600' },
+    addBtn: { backgroundColor: t.primary, borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center' },
+    addBtnText: { color: t.onPrimary, fontWeight: '600', fontSize: 16 },
+    empty: { textAlign: 'center', color: t.textFaint, marginTop: 40 },
+    errorTitle: { fontSize: 18, fontWeight: '700', color: t.text, marginBottom: 8 },
+    errorBody: { fontSize: 14, color: t.textMuted, marginBottom: 16, textAlign: 'center' },
+    retryBtn: { backgroundColor: t.primary, borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 },
+    retryText: { color: t.onPrimary, fontWeight: '700' },
+  });
+}
