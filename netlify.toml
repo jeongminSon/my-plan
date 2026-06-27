@@ -1,0 +1,15 @@
+# Netlify 배포 설정 — Expo 웹(정적) + 동기화 Function
+
+[build]
+  command = "npm run build:web"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# SPA 라우팅: 모든 경로를 index.html로 (함수 경로 /.netlify/functions/* 는 Netlify가 먼저 처리)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

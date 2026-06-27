@@ -466,5 +466,5 @@ export class SqliteTaskRepository implements TaskRepository, SyncStore {
   }
 }
 
-/** 앱 전역에서 공유하는 단일 저장소 인스턴스 */
-export const taskRepository: TaskRepository = new SqliteTaskRepository();
+/** 앱 전역에서 공유하는 단일 저장소 인스턴스 (동기화 기능 포함) */
+export const taskRepository: TaskRepository & SyncStore = new SqliteTaskRepository();

@@ -168,14 +168,46 @@ eas submit --platform ios      # App Store 제출
 ### 품질 게이트(배포 전 실행)
 ```bash
 npx tsc --noEmit   # 타입 체크
-npm test           # 단위 테스트 (59개)
-npx expo export --platform web   # 번들 무결성 확인
+npm test           # 단위 테스트 (69개)
+npm run build:web  # 웹 번들(dist) 무결성 확인
 ```
+
+## Netlify 웹 배포 + 동기화 서버
+웹 앱과 **동기화 서버(Netlify Function)** 를 한 사이트에 함께 배포한다.
+
+- `netlify.toml`: 빌드 `npm run build:web` → 퍼블리시 `dist`, 함수 디렉토리 `netlify/functions`
+- 동기화 서버: `netlify/functions/sync.mjs` (Netlify Blobs 저장, 서버측 LWW, `x-sync-key`로 사용자 격리, HTTPS 자동)
+- 동기화 클라이언트: `src/sync/HttpRemote.ts` → `src/sync/SyncEngine.ts`(LWW)
+
+### 배포 방법(택1)
+1. **GitHub 연동(권장)**: Netlify에서 이 저장소를 연결하면 푸시할 때마다 자동 빌드·배포
+2. **드래그&드롭**: `npm run build:web` 후 `dist/` 폴더를 Netlify에 끌어다 놓기 (단, 이 경우 Function은 별도 배포 필요)
+
+### 동기화 사용
+- 앱의 **⟳ 동기화** 버튼 → 서버와 push/pull. 충돌은 최신 변경 우선(LWW).
+- **코드** 패널의 동기화 코드를 다른 기기에 입력하면 같은 데이터를 공유(익명 키, 개인정보 없음).
+- **웹**: 같은 사이트의 함수를 자동 사용(상대경로).
+- **네이티브(Android/iOS)**: 빌드 시 서버 주소를 주입한다.
+  ```bash
+  # 예: Netlify 사이트가 https://my-plan.netlify.app 인 경우
+  EXPO_PUBLIC_SYNC_URL=https://my-plan.netlify.app/.netlify/functions/sync eas build -p android --profile preview
+  ```
+
+## Android APK (폰에서 테스트)
+EAS로 설치형 APK를 만든다(무료 Expo 계정 필요, 빌드는 클라우드에서 수행).
+```bash
+npm install -g eas-cli
+eas login                                   # 최초 1회 (본인 Expo 계정)
+eas build -p android --profile preview      # APK 빌드 → 완료되면 다운로드 링크 제공
+```
+- `eas.json`의 `preview` 프로필이 **APK(buildType: apk)** 를 만들어 폰에 바로 설치 가능.
+- 동기화까지 쓰려면 위 `EXPO_PUBLIC_SYNC_URL` 을 함께 지정.
+- 빠른 확인만 원하면 `npx expo start` 후 **Expo Go** 앱으로 QR 스캔(로컬 알림 등 일부 제약).
 
 ### 문서
 - 개인정보 처리방침: [`docs/PRIVACY.md`](docs/PRIVACY.md) — 배포 시 호스팅 URL로 게시
 - 스토어 등록 정보: [`docs/STORE.md`](docs/STORE.md)
 
 ## 향후 확장 여지
-- 클라우드 동기화 백엔드 연결(S2~), 정확한 날짜/시간 선택 UI
-- 드래그로 순서 변경, 위젯, 호스팅 크래시 리포팅(도입 시 데이터 전송 항목 사전 고지)
+- 동기화 인증을 익명 코드 → OAuth(구글/애플)로 강화(S3)
+- 정확한 날짜/시간 선택 UI, 드래그로 순서 변경, 위젯

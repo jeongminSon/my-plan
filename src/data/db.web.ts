@@ -306,5 +306,5 @@ export class LocalStorageTaskRepository implements TaskRepository, SyncStore {
   }
 }
 
-/** 앱 전역에서 공유하는 단일 저장소 인스턴스 (웹) */
-export const taskRepository: TaskRepository = new LocalStorageTaskRepository();
+/** 앱 전역에서 공유하는 단일 저장소 인스턴스 (웹, 동기화 기능 포함) */
+export const taskRepository: TaskRepository & SyncStore = new LocalStorageTaskRepository();

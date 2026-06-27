@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ListBar, ListFilter } from '../components/ListBar';
+import { SyncBar } from '../components/SyncBar';
 import { TaskItem } from '../components/TaskItem';
 import { TaskRepository } from '../data/taskRepository';
+import { SyncStore } from '../sync/SyncStore';
 import { Priority, RepeatRule, Task } from '../models/Task';
 import { TaskList } from '../models/TaskList';
 import { NotificationService } from '../services/NotificationService';
@@ -19,7 +21,7 @@ import { computeStats } from '../utils/stats';
 import { selectAllTasks, selectTodayTasks, todayProgress } from '../utils/todayView';
 
 interface Props {
-  repository: TaskRepository;
+  repository: TaskRepository & SyncStore;
   notifications: NotificationService;
 }
 
@@ -166,6 +168,9 @@ export function TaskListScreen({ repository, notifications }: Props) {
           <Text style={styles.statLabel}>이번 주 완료</Text>
         </View>
       </View>
+
+      {/* 클라우드 동기화 */}
+      <SyncBar store={repository} onSynced={reload} />
 
       <ListBar
         lists={lists}
