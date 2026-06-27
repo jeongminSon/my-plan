@@ -160,7 +160,7 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
             onChangeText={(t) => setOtp(t.replace(/\D/g, '').slice(0, 10))}
             keyboardType="number-pad"
             maxLength={10}
-            placeholder="000000"
+            placeholder="00000000"
             placeholderTextColor={theme.textFaint}
             editable={!verifying}
             textAlign="center"
