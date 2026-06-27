@@ -1,14 +1,20 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/auth/AuthContext';
 import { AuthGate } from './src/auth/AuthGate';
 import { AuthScreen } from './src/auth/screens/AuthScreen';
-import { SupabaseAuthProvider } from './src/auth/SupabaseAuthContext';
+import { SupabaseAuthProvider, useSupabaseAuth } from './src/auth/SupabaseAuthContext';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { taskRepository } from './src/data/db';
+import { SupabaseTaskRepository } from './src/data/supabaseRepository';
+import { runMigration } from './src/migration/runMigration';
+import { logger } from './src/services/logger';
 import { notificationService } from './src/services/notifications';
+import { supabase } from './src/supabase/client';
 import { TaskListScreen } from './src/screens/TaskListScreen';
+import { Theme } from './src/theme/theme';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
 export default function App() {
@@ -30,17 +36,85 @@ export default function App() {
 function ThemedRoot() {
   const theme = useTheme();
   return (
-    // edges로 상태바/내비게이션바 영역을 안전하게 피한다(안드로이드 edge-to-edge 대응)
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
-      {/* 보호 게이트: 로그인해야 앱 진입(Supabase 미설정 시 통과). 저장소·알림은 화면에 주입 */}
       <AuthGate fallback={<AuthScreen />}>
-        <TaskListScreen repository={taskRepository} notifications={notificationService} />
+        <AppData />
       </AuthGate>
     </SafeAreaView>
   );
 }
 
+/** 로그인+Supabase 설정 시 클라우드 저장소, 아니면 로컬 저장소 */
+function AppData() {
+  const { session, configured } = useSupabaseAuth();
+  if (configured && session && supabase) {
+    return <CloudApp userId={session.user.id} />;
+  }
+  return (
+    <TaskListScreen
+      repository={taskRepository}
+      syncStore={taskRepository}
+      notifications={notificationService}
+    />
+  );
+}
+
+/** 클라우드 저장소 + 1회성 마이그레이션 게이트(유실 방지). */
+function CloudApp({ userId }: { userId: string }) {
+  const theme = useTheme();
+  const repo = useMemo(() => new SupabaseTaskRepository(supabase!, userId), [userId]);
+  const [phase, setPhase] = useState<'migrating' | 'ready' | 'error'>('migrating');
+
+  const run = useCallback(() => {
+    setPhase('migrating');
+    runMigration(taskRepository, repo, userId)
+      .then((r) => setPhase(r.status === 'failed' ? 'error' : 'ready'))
+      .catch((e) => {
+        logger.error(e instanceof Error ? e.message : String(e), 'migration');
+        setPhase('error');
+      });
+  }, [repo, userId]);
+
+  useEffect(() => run(), [run]);
+
+  if (phase === 'migrating') {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={theme.primary} />
+        <Text style={[styles.msg, { color: theme.textMuted }]}>데이터 준비 중…</Text>
+      </View>
+    );
+  }
+  if (phase === 'error') {
+    return <MigrationError theme={theme} onRetry={run} />;
+  }
+  return <TaskListScreen repository={repo} notifications={notificationService} />;
+}
+
+function MigrationError({ theme, onRetry }: { theme: Theme; onRetry: () => void }) {
+  return (
+    <View style={styles.center}>
+      <Text style={[styles.title, { color: theme.text }]}>데이터 준비에 실패했어요</Text>
+      <Text style={[styles.msg, { color: theme.textMuted }]}>
+        기존 데이터는 안전하게 보관돼 있어요. 인터넷 확인 후 다시 시도해 주세요.
+      </Text>
+      <Pressable
+        style={[styles.retry, { backgroundColor: theme.primary }]}
+        onPress={onRetry}
+        accessibilityRole="button"
+      >
+        <Text style={[styles.retryText, { color: theme.onPrimary }]}>다시 시도</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 10 },
+  title: { fontSize: 18, fontWeight: '700' },
+  msg: { fontSize: 14, textAlign: 'center', lineHeight: 21 },
+  retry: { minHeight: 48, borderRadius: 10, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  retryText: { fontSize: 16, fontWeight: '700' },
 });

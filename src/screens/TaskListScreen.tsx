@@ -22,13 +22,15 @@ import { computeStats } from '../utils/stats';
 import { selectAllTasks, selectTodayTasks, todayProgress } from '../utils/todayView';
 
 interface Props {
-  repository: TaskRepository & SyncStore;
+  repository: TaskRepository;
   notifications: NotificationService;
+  /** 로컬 모드에서만 전달 — 있으면 레거시 동기화 바(Netlify) 표시. 클라우드(Supabase) 모드에선 생략 */
+  syncStore?: SyncStore;
 }
 
 type ViewMode = 'today' | 'all';
 
-export function TaskListScreen({ repository, notifications }: Props) {
+export function TaskListScreen({ repository, notifications, syncStore }: Props) {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { preference, setPreference } = useThemePreference();
@@ -43,6 +45,7 @@ export function TaskListScreen({ repository, notifications }: Props) {
   const [initError, setInitError] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const now = Date.now();
+  const [actionError, setActionError] = useState('');
 
   const reload = useCallback(async () => {
     const [t, l] = await Promise.all([repository.getAll(), repository.getLists()]);
@@ -74,39 +77,56 @@ export function TaskListScreen({ repository, notifications }: Props) {
     };
   }, [bootstrap]);
 
-  const handleAdd = useCallback(async () => {
-    const trimmed = title.trim();
-    if (!trimmed) return;
-    const listId = listFilter === 'all' ? undefined : listFilter;
-    await repository.add({ title: trimmed, dueDate: addDue, listId });
-    setTitle('');
-    setAddDue(undefined);
-    await reload();
-    inputRef.current?.focus();
-  }, [title, addDue, listFilter, repository, reload]);
+  // 쓰기 작업 공통 래퍼: 오류 시 안내(데이터 깨짐 없음 — 행은 들어가거나 안 들어가거나).
+  // 실패 시 입력 드래프트는 보존된다(setTitle 등은 성공 경로에서만 실행).
+  const mutate = useCallback(async (op: () => Promise<void>) => {
+    try {
+      await op();
+      setActionError('');
+    } catch (e) {
+      logger.error(e instanceof Error ? e.message : String(e), 'mutation');
+      setActionError('저장에 실패했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.');
+    }
+  }, []);
 
-  const handleToggle = useCallback(async (id: string) => { await repository.toggleComplete(id); await reload(); }, [repository, reload]);
-  const handleDelete = useCallback(async (id: string) => { await repository.remove(id); await reload(); }, [repository, reload]);
-  const handleCycleDue = useCallback(async (id: string, c: number | undefined) => { await repository.setDueDate(id, nextDueDate(c, now)); await reload(); }, [repository, reload, now]);
-  const handleCycleList = useCallback(async (id: string, c: string | undefined) => { await repository.setTaskList(id, nextListId(c, lists)); await reload(); }, [repository, reload, lists]);
-  const handleCycleRepeat = useCallback(async (id: string, c: RepeatRule | undefined) => { await repository.setRepeat(id, nextRepeat(c)); await reload(); }, [repository, reload]);
-  const handleCyclePriority = useCallback(async (id: string, c: Priority | undefined) => { await repository.setPriority(id, nextPriority(c)); await reload(); }, [repository, reload]);
-  const handleAddSubtask = useCallback(async (taskId: string, t: string) => { await repository.addSubtask(taskId, t); await reload(); }, [repository, reload]);
-  const handleToggleSubtask = useCallback(async (taskId: string, sid: string) => { await repository.toggleSubtask(taskId, sid); await reload(); }, [repository, reload]);
-  const handleRemoveSubtask = useCallback(async (taskId: string, sid: string) => { await repository.removeSubtask(taskId, sid); await reload(); }, [repository, reload]);
-
-  const handleCycleReminder = useCallback(
-    async (task: Task) => {
-      const result = await applyReminder({ service: notifications, repository, task, reminderAt: nextReminder(task.reminderAt, Date.now()) });
-      if (result.permissionDenied) logger.warn('알림 권한 거부 — 알림 미예약', 'reminder');
-      await reload();
-    },
-    [notifications, repository, reload]
+  const handleAdd = useCallback(
+    () =>
+      mutate(async () => {
+        const trimmed = title.trim();
+        if (!trimmed) return;
+        const listId = listFilter === 'all' ? undefined : listFilter;
+        await repository.add({ title: trimmed, dueDate: addDue, listId });
+        setTitle('');
+        setAddDue(undefined);
+        await reload();
+        inputRef.current?.focus();
+      }),
+    [mutate, title, addDue, listFilter, repository, reload]
   );
 
-  const handleAddList = useCallback(async (name: string) => { await repository.addList(name); await reload(); }, [repository, reload]);
-  const handleRenameList = useCallback(async (id: string, name: string) => { await repository.renameList(id, name); await reload(); }, [repository, reload]);
-  const handleRemoveList = useCallback(async (id: string) => { await repository.removeList(id); if (listFilter === id) setListFilter('all'); await reload(); }, [repository, reload, listFilter]);
+  const handleToggle = useCallback((id: string) => mutate(async () => { await repository.toggleComplete(id); await reload(); }), [mutate, repository, reload]);
+  const handleDelete = useCallback((id: string) => mutate(async () => { await repository.remove(id); await reload(); }), [mutate, repository, reload]);
+  const handleCycleDue = useCallback((id: string, c: number | undefined) => mutate(async () => { await repository.setDueDate(id, nextDueDate(c, now)); await reload(); }), [mutate, repository, reload, now]);
+  const handleCycleList = useCallback((id: string, c: string | undefined) => mutate(async () => { await repository.setTaskList(id, nextListId(c, lists)); await reload(); }), [mutate, repository, reload, lists]);
+  const handleCycleRepeat = useCallback((id: string, c: RepeatRule | undefined) => mutate(async () => { await repository.setRepeat(id, nextRepeat(c)); await reload(); }), [mutate, repository, reload]);
+  const handleCyclePriority = useCallback((id: string, c: Priority | undefined) => mutate(async () => { await repository.setPriority(id, nextPriority(c)); await reload(); }), [mutate, repository, reload]);
+  const handleAddSubtask = useCallback((taskId: string, t: string) => mutate(async () => { await repository.addSubtask(taskId, t); await reload(); }), [mutate, repository, reload]);
+  const handleToggleSubtask = useCallback((taskId: string, sid: string) => mutate(async () => { await repository.toggleSubtask(taskId, sid); await reload(); }), [mutate, repository, reload]);
+  const handleRemoveSubtask = useCallback((taskId: string, sid: string) => mutate(async () => { await repository.removeSubtask(taskId, sid); await reload(); }), [mutate, repository, reload]);
+
+  const handleCycleReminder = useCallback(
+    (task: Task) =>
+      mutate(async () => {
+        const result = await applyReminder({ service: notifications, repository, task, reminderAt: nextReminder(task.reminderAt, Date.now()) });
+        if (result.permissionDenied) logger.warn('알림 권한 거부 — 알림 미예약', 'reminder');
+        await reload();
+      }),
+    [mutate, notifications, repository, reload]
+  );
+
+  const handleAddList = useCallback((name: string) => mutate(async () => { await repository.addList(name); await reload(); }), [mutate, repository, reload]);
+  const handleRenameList = useCallback((id: string, name: string) => mutate(async () => { await repository.renameList(id, name); await reload(); }), [mutate, repository, reload]);
+  const handleRemoveList = useCallback((id: string) => mutate(async () => { await repository.removeList(id); if (listFilter === id) setListFilter('all'); await reload(); }), [mutate, repository, reload, listFilter]);
 
   const cycleTheme = () => setPreference(preference === 'system' ? 'light' : preference === 'light' ? 'dark' : 'system');
   const themeBtn = preference === 'system' ? '🌗 시스템' : preference === 'light' ? '☀️ 라이트' : '🌙 다크';
@@ -173,8 +193,8 @@ export function TaskListScreen({ repository, notifications }: Props) {
         </View>
       </View>
 
-      {/* 클라우드 동기화 */}
-      <SyncBar store={repository} onSynced={reload} />
+      {/* 레거시 동기화 바(로컬 모드 전용). Supabase 클라우드 모드에선 저장소 자체가 클라우드라 생략 */}
+      {syncStore ? <SyncBar store={syncStore} onSynced={reload} /> : null}
 
       <ListBar
         lists={lists}
@@ -205,6 +225,12 @@ export function TaskListScreen({ repository, notifications }: Props) {
           <Text style={styles.addBtnText}>추가</Text>
         </Pressable>
       </View>
+
+      {actionError ? (
+        <Pressable onPress={() => setActionError('')} style={styles.actionError} accessibilityRole="button" accessibilityLabel="오류 닫기">
+          <Text style={styles.actionErrorText}>⚠ {actionError}</Text>
+        </Pressable>
+      ) : null}
 
       <FlatList
         data={visible}
@@ -273,6 +299,8 @@ function makeStyles(t: Theme) {
     addBtn: { backgroundColor: t.primary, borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center' },
     addBtnText: { color: t.onPrimary, fontWeight: '600', fontSize: 16 },
     empty: { textAlign: 'center', color: t.textFaint, marginTop: 40 },
+    actionError: { marginHorizontal: 16, marginBottom: 8, padding: 10, borderRadius: 8, backgroundColor: t.dangerBg },
+    actionErrorText: { color: t.danger, fontSize: 13, fontWeight: '600' },
     errorTitle: { fontSize: 18, fontWeight: '700', color: t.text, marginBottom: 8 },
     errorBody: { fontSize: 14, color: t.textMuted, marginBottom: 16, textAlign: 'center' },
     retryBtn: { backgroundColor: t.primary, borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 },

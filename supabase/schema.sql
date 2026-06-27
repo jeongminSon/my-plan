@@ -55,3 +55,35 @@ drop trigger if exists todos_set_updated_at on public.todos;
 create trigger todos_set_updated_at
   before update on public.todos
   for each row execute function public.set_updated_at();
+
+-- ============================================================
+-- 5) lists 테이블 (목록/프로젝트) — 회귀 방지(로그인 후에도 목록 기능 동작)
+-- ============================================================
+create table if not exists public.lists (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  name       text not null,
+  sort_order double precision not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+create index if not exists lists_user_idx on public.lists(user_id);
+
+alter table public.lists enable row level security;
+
+drop policy if exists lists_select_own on public.lists;
+drop policy if exists lists_insert_own on public.lists;
+drop policy if exists lists_update_own on public.lists;
+drop policy if exists lists_delete_own on public.lists;
+
+create policy lists_select_own on public.lists for select using (auth.uid() = user_id);
+create policy lists_insert_own on public.lists for insert with check (auth.uid() = user_id);
+create policy lists_update_own on public.lists for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy lists_delete_own on public.lists for delete using (auth.uid() = user_id);
+
+drop trigger if exists lists_set_updated_at on public.lists;
+create trigger lists_set_updated_at
+  before update on public.lists
+  for each row execute function public.set_updated_at();
