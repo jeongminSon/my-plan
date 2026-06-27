@@ -78,17 +78,25 @@ function CloudApp({ userId }: { userId: string }) {
     );
   }
   if (phase === 'error') {
-    return <MigrationError theme={theme} onRetry={run} />;
+    return <MigrationError theme={theme} onRetry={run} onSkip={() => setPhase('ready')} />;
   }
   return <TaskListScreen repository={repo} notifications={notificationService} />;
 }
 
-function MigrationError({ theme, onRetry }: { theme: Theme; onRetry: () => void }) {
+function MigrationError({
+  theme,
+  onRetry,
+  onSkip,
+}: {
+  theme: Theme;
+  onRetry: () => void;
+  onSkip: () => void;
+}) {
   return (
     <View style={styles.center}>
       <Text style={[styles.title, { color: theme.text }]}>데이터 준비에 실패했어요</Text>
       <Text style={[styles.msg, { color: theme.textMuted }]}>
-        기존 데이터는 안전하게 보관돼 있어요. 인터넷 확인 후 다시 시도해 주세요.
+        기존 기기 데이터를 옮기는 중 문제가 생겼어요. 데이터는 안전하게 보관돼 있어요.
       </Text>
       <Pressable
         style={[styles.retry, { backgroundColor: theme.primary }]}
@@ -96,6 +104,9 @@ function MigrationError({ theme, onRetry }: { theme: Theme; onRetry: () => void 
         accessibilityRole="button"
       >
         <Text style={[styles.retryText, { color: theme.onPrimary }]}>다시 시도</Text>
+      </Pressable>
+      <Pressable style={styles.skip} onPress={onSkip} accessibilityRole="button">
+        <Text style={[styles.skipText, { color: theme.textMuted }]}>건너뛰고 시작하기</Text>
       </Pressable>
     </View>
   );
@@ -108,4 +119,6 @@ const styles = StyleSheet.create({
   msg: { fontSize: 14, textAlign: 'center', lineHeight: 21 },
   retry: { minHeight: 48, borderRadius: 10, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   retryText: { fontSize: 16, fontWeight: '700' },
+  skip: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  skipText: { fontSize: 14, fontWeight: '600' },
 });

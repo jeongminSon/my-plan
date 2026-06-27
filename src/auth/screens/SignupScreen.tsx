@@ -27,12 +27,11 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
   const [errors, setErrors] = useState<SignupErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [topError, setTopError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [signedUp, setSignedUp] = useState(false);
 
   const handleSubmit = async () => {
     if (submitting || !supabase) return; // 중복 제출 차단
     setTopError('');
-    setSuccess('');
     const v = validateSignup({ email, password, confirm });
     setErrors(v);
     if (v.email || v.password || v.confirm) return; // 검증 오류 → API 호출 안 함
@@ -48,8 +47,8 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
       } else if (data.session) {
         // (Confirm email OFF인 경우) 자동 로그인 → AuthGate가 앱으로 전환
       } else {
-        // 표준 흐름: 확인메일 인증 후 로그인(자동 로그인은 스펙아웃)
-        setSuccess('확인 메일을 보냈어요. 메일의 링크로 인증한 뒤 로그인해 주세요.');
+        // 표준 흐름: 가입 완료 화면으로 전환(확인메일 인증 후 로그인)
+        setSignedUp(true);
       }
     } catch (e) {
       setTopError(isNetworkError(e) ? MESSAGES.network : MESSAGES.generic);
@@ -57,6 +56,26 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
       setSubmitting(false);
     }
   };
+
+  // 가입 완료(확인메일 발송) → 전용 완료 화면 + 로그인 이동
+  if (signedUp) {
+    return (
+      <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
+        <View style={s.card}>
+          <Text style={s.title}>회원가입 완료 🎉</Text>
+          <View style={[s.banner, s.bannerSuccess]} accessibilityLiveRegion="polite">
+            <Text style={s.bannerIconSuccess}>✓</Text>
+            <Text style={s.bannerTextSuccess}>
+              {email.trim()} 로 확인 메일을 보냈어요. 메일의 링크로 인증한 뒤 로그인해 주세요.
+            </Text>
+          </View>
+          <Pressable style={s.button} onPress={onSwitchToLogin} accessibilityRole="button">
+            <Text style={s.buttonText}>로그인하러 가기</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
@@ -68,12 +87,6 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
           <View style={[s.banner, s.bannerError]} accessibilityLiveRegion="polite">
             <Text style={s.bannerIconError}>⚠</Text>
             <Text style={s.bannerTextError}>{topError}</Text>
-          </View>
-        ) : null}
-        {success ? (
-          <View style={[s.banner, s.bannerSuccess]} accessibilityLiveRegion="polite">
-            <Text style={s.bannerIconSuccess}>✓</Text>
-            <Text style={s.bannerTextSuccess}>{success}</Text>
           </View>
         ) : null}
 

@@ -4,8 +4,8 @@ import { TaskList } from '../models/TaskList';
 import { generateId } from '../utils/id';
 import { buildNewList, buildNewTask, nextOccurrence, TaskRepository } from './taskRepository';
 
-/** epoch ms ↔ timestamptz(ISO) 변환 */
-const toIso = (ms?: number) => (ms != null ? new Date(ms).toISOString() : null);
+/** epoch ms ↔ timestamptz(ISO) 변환 (유효하지 않은 값은 null — toISOString 예외 방지) */
+const toIso = (ms?: number) => (ms != null && Number.isFinite(ms) ? new Date(ms).toISOString() : null);
 const toMs = (iso?: string | null) => (iso ? new Date(iso).getTime() : undefined);
 
 interface TodoRow {
