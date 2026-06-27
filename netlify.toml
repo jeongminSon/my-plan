@@ -14,3 +14,15 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# 보안 응답 헤더
+# - CSP: 스크립트는 self만(번들 외 인라인 스크립트 없음). 스타일은 react-native-web의
+#   런타임 인라인 스타일 때문에 'unsafe-inline' 필요. connect-src에 Supabase(REST/Realtime)
+#   + Google OAuth 허용. frame-ancestors 'none'으로 클릭재킹 차단.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://bvyzneijqpjjsqjtkzxg.supabase.co wss://bvyzneijqpjjsqjtkzxg.supabase.co https://accounts.google.com; frame-src https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
