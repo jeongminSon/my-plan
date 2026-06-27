@@ -44,6 +44,19 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
 
     setSubmitting(true);
     try {
+      // 중복 가입 사전 차단: DB 함수로 확정 계정 존재 확인(함수 미설치/오류면 조용히 건너뜀)
+      try {
+        const { data: exists, error: rpcErr } = await supabase.rpc('email_exists', {
+          p_email: email.trim(),
+        });
+        if (!rpcErr && exists === true) {
+          setTopError('이미 가입된 이메일입니다. 로그인해 주세요.');
+          return;
+        }
+      } catch {
+        // email_exists 함수가 없으면 무시하고 진행
+      }
+
       const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
       if (error) {
         const blob = `${error.message ?? ''} ${(error as { code?: string }).code ?? ''} ${
@@ -57,6 +70,9 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
         else if (/signup.*disabled|not allowed/.test(blob))
           setTopError('현재 회원가입이 비활성화되어 있어요.');
         else setTopError(MESSAGES.generic);
+      } else if (data.user && (data.user.identities?.length ?? 0) === 0) {
+        // Supabase 중복 신호(이메일 확인 활성 시 빈 identities) — 백업 가드
+        setTopError('이미 가입된 이메일입니다. 로그인해 주세요.');
       } else if (data.session) {
         // (Confirm email OFF인 경우) 자동 로그인 → AuthGate가 앱으로 전환
       } else {
@@ -71,7 +87,7 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
   };
 
   const handleVerify = async () => {
-    if (otp.length !== 6 || verifying || !supabase) return;
+    if (otp.length < 6 || verifying || !supabase) return;
     setVerifying(true);
     setOtpError('');
     try {
@@ -123,7 +139,7 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
       <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
         <View style={s.card}>
           <Text style={s.title}>이메일 인증</Text>
-          <Text style={s.subtitle}>{email.trim()} 로 보낸 6자리 코드를 입력하세요.</Text>
+          <Text style={s.subtitle}>{email.trim()} 로 보낸 인증 코드를 입력하세요.</Text>
 
           {otpError ? (
             <View style={[s.banner, s.bannerError]} accessibilityLiveRegion="polite">
@@ -141,9 +157,9 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
           <TextInput
             style={s.otpInput}
             value={otp}
-            onChangeText={(t) => setOtp(t.replace(/\D/g, '').slice(0, 6))}
+            onChangeText={(t) => setOtp(t.replace(/\D/g, '').slice(0, 10))}
             keyboardType="number-pad"
-            maxLength={6}
+            maxLength={10}
             placeholder="000000"
             placeholderTextColor={theme.textFaint}
             editable={!verifying}
@@ -154,9 +170,9 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
           />
 
           <Pressable
-            style={[s.button, (otp.length !== 6 || verifying) && s.buttonDisabled]}
+            style={[s.button, (otp.length < 6 || verifying) && s.buttonDisabled]}
             onPress={handleVerify}
-            disabled={otp.length !== 6 || verifying}
+            disabled={otp.length < 6 || verifying}
             accessibilityRole="button"
           >
             {verifying ? <ActivityIndicator color={theme.onPrimary} /> : null}
