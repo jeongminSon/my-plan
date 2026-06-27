@@ -1,6 +1,6 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { isSupabaseConfigured, recovery, supabase } from '../supabase/client';
 import { clearLocalCacheOnLogout } from './localCleanup';
 
@@ -70,6 +70,44 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       sub.subscription.unsubscribe();
       unsubRecovery();
       removeHash?.();
+    };
+  }, []);
+
+  // 네이티브: 비밀번호 재설정 딥링크(myplan://reset#...type=recovery) 처리
+  // (웹은 detectSessionInUrl이 자동 처리하므로 제외)
+  useEffect(() => {
+    if (Platform.OS === 'web' || !supabase) return;
+    const client = supabase;
+    let cancelled = false;
+
+    const handle = async (url: string | null) => {
+      if (!url || cancelled) return;
+      const isRecovery = /type=recovery/.test(url) || /(:|\/)reset(\b|[?#/])/.test(url);
+      if (!isRecovery) return;
+      const frag = url.includes('#')
+        ? url.slice(url.indexOf('#') + 1)
+        : url.includes('?')
+          ? url.slice(url.indexOf('?') + 1)
+          : '';
+      const p = new URLSearchParams(frag);
+      const at = p.get('access_token');
+      const rt = p.get('refresh_token');
+      const code = p.get('code');
+      try {
+        if (at && rt) await client.auth.setSession({ access_token: at, refresh_token: rt });
+        else if (code) await client.auth.exchangeCodeForSession(code);
+        else return;
+        if (!cancelled) setPasswordRecovery(true); // 새 비밀번호 화면으로
+      } catch {
+        // 잘못된/만료 토큰 — 무시(사용자는 다시 요청)
+      }
+    };
+
+    Linking.getInitialURL().then(handle); // 앱이 꺼져 있다가 링크로 열린 경우
+    const sub = Linking.addEventListener('url', (e) => handle(e.url)); // 앱이 떠 있는 경우
+    return () => {
+      cancelled = true;
+      sub.remove();
     };
   }, []);
 
