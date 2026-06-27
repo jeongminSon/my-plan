@@ -40,9 +40,16 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
     try {
       const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
       if (error) {
+        const blob = `${error.message ?? ''} ${(error as { code?: string }).code ?? ''} ${
+          (error as { status?: number }).status ?? ''
+        }`.toLowerCase();
         if (isNetworkError(error)) setTopError(MESSAGES.network);
-        else if (/registered|already|exists/i.test(error.message))
+        else if (/rate limit|over_email|too many|429/.test(blob))
+          setTopError('가입 메일 발송 한도를 넘었어요. 잠시 후(보통 1시간 이내) 다시 시도해 주세요.');
+        else if (/registered|already|exists/.test(blob))
           setTopError('이미 가입된 이메일입니다. 로그인해 주세요.');
+        else if (/signup.*disabled|not allowed/.test(blob))
+          setTopError('현재 회원가입이 비활성화되어 있어요.');
         else setTopError(MESSAGES.generic);
       } else if (data.session) {
         // (Confirm email OFF인 경우) 자동 로그인 → AuthGate가 앱으로 전환
