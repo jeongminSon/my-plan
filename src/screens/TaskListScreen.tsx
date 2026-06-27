@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ProfileMenu } from '../auth/ProfileMenu';
+import { Icon, IconName } from '../components/Icon';
 import { ListBar, ListFilter } from '../components/ListBar';
 import { TaskItem } from '../components/TaskItem';
 import { TaskRepository } from '../data/taskRepository';
@@ -9,7 +10,7 @@ import { TaskList } from '../models/TaskList';
 import { NotificationService } from '../services/NotificationService';
 import { applyReminder } from '../services/reminderCoordinator';
 import { logger } from '../services/logger';
-import { Theme } from '../theme/theme';
+import { radius, shadow, space, tabularNums, Theme, typeScale, weight } from '../theme/theme';
 import { useTheme, useThemePreference } from '../theme/ThemeContext';
 import { dueDateLabel, nextDueDate } from '../utils/date';
 import { nextListId } from '../utils/lists';
@@ -125,7 +126,8 @@ export function TaskListScreen({ repository, notifications }: Props) {
   const handleRemoveList = useCallback((id: string) => mutate(async () => { await repository.removeList(id); if (listFilter === id) setListFilter('all'); await reload(); }), [mutate, repository, reload, listFilter]);
 
   const cycleTheme = () => setPreference(preference === 'system' ? 'light' : preference === 'light' ? 'dark' : 'system');
-  const themeBtn = preference === 'system' ? '🌗 시스템' : preference === 'light' ? '☀️ 라이트' : '🌙 다크';
+  const themeIcon: IconName = preference === 'system' ? 'monitor' : preference === 'light' ? 'sun' : 'moon';
+  const themeLabel = preference === 'system' ? '시스템' : preference === 'light' ? '라이트' : '다크';
 
   if (initError) {
     return (
@@ -154,38 +156,50 @@ export function TaskListScreen({ repository, notifications }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.flex1}>
-          <Text style={styles.headerTitle}>할일</Text>
-          <Text style={styles.count}>오늘 {progress.total}개 중 {progress.done}개 완료</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <View style={styles.headerTopRow}>
-            <ProfileMenu />
-            <Pressable onPress={cycleTheme} style={styles.themeBtn} accessibilityLabel={`테마: ${themeBtn}`}>
-              <Text style={styles.themeBtnText}>{themeBtn}</Text>
-            </Pressable>
-          </View>
-          <View style={styles.toggle}>
-            <ViewToggleButton styles={styles} label="오늘" active={view === 'today'} onPress={() => setView('today')} />
-            <ViewToggleButton styles={styles} label="전체" active={view === 'all'} onPress={() => setView('all')} />
-          </View>
+      {/* 상단: 워드마크 + 프로필/테마 */}
+      <View style={styles.topRow}>
+        <Text style={styles.wordmark}>my-plan</Text>
+        <View style={styles.topActions}>
+          <ProfileMenu />
+          <Pressable
+            onPress={cycleTheme}
+            style={styles.themeBtn}
+            accessibilityRole="button"
+            accessibilityLabel={`테마: ${themeLabel} (눌러서 변경)`}
+            hitSlop={6}
+          >
+            <Icon name={themeIcon} size={18} color={theme.textMuted} />
+          </Pressable>
         </View>
       </View>
 
-      {/* 진행 통계 카드 */}
-      <View style={styles.statsCard}>
-        <View style={styles.statCell}>
-          <Text style={styles.statValue}>{todayPct}%</Text>
-          <Text style={styles.statLabel}>오늘 완료율</Text>
-          <View style={styles.bar}>
-            <View style={[styles.barFill, { width: `${todayPct}%` }]} />
+      {/* 히어로 글랜스: 오늘 진행이 주인공 */}
+      <View style={styles.heroCard}>
+        <View style={styles.heroTop}>
+          <View style={styles.heroNumWrap}>
+            <Text style={styles.heroNum}>
+              {progress.done}
+              <Text style={styles.heroDenom}> / {progress.total}</Text>
+            </Text>
+            <Text style={styles.heroLabel}>오늘 완료</Text>
+          </View>
+          <View style={styles.heroPctWrap}>
+            <Text style={styles.heroPct}>{todayPct}%</Text>
           </View>
         </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statCell}>
-          <Text style={styles.statValue}>{stats.weekDone}</Text>
-          <Text style={styles.statLabel}>이번 주 완료</Text>
+        <View style={styles.bar}>
+          <View style={[styles.barFill, { width: `${todayPct}%` }]} />
+        </View>
+        <Text style={styles.heroWeek}>
+          이번 주 <Text style={styles.heroWeekNum}>{stats.weekDone}</Text>개 완료
+        </Text>
+      </View>
+
+      {/* 오늘/전체 토글 */}
+      <View style={styles.toggleRow}>
+        <View style={styles.toggle}>
+          <ViewToggleButton styles={styles} label="오늘" active={view === 'today'} onPress={() => setView('today')} />
+          <ViewToggleButton styles={styles} label="전체" active={view === 'all'} onPress={() => setView('all')} />
         </View>
       </View>
 
@@ -211,17 +225,27 @@ export function TaskListScreen({ repository, notifications }: Props) {
           blurOnSubmit={false}
           autoFocus
         />
-        <Pressable style={styles.dueToggle} onPress={() => setAddDue((cur) => nextDueDate(cur, now))} accessibilityLabel="새 할일 마감일">
-          <Text style={styles.dueToggleText}>📅 {addDue != null ? dueDateLabel(addDue, now) : '없음'}</Text>
+        <Pressable
+          style={styles.dueToggle}
+          onPress={() => setAddDue((cur) => nextDueDate(cur, now))}
+          accessibilityRole="button"
+          accessibilityLabel="새 할일 마감일"
+        >
+          <Icon name="calendar" size={14} color={addDue != null ? theme.primary : theme.textMuted} />
+          <Text style={[styles.dueToggleText, addDue != null && { color: theme.primary }]}>
+            {addDue != null ? dueDateLabel(addDue, now) : '없음'}
+          </Text>
         </Pressable>
-        <Pressable style={styles.addBtn} onPress={handleAdd} accessibilityRole="button">
+        <Pressable style={styles.addBtn} onPress={handleAdd} accessibilityRole="button" accessibilityLabel="할일 추가">
+          <Icon name="plus" size={18} color={theme.onPrimary} />
           <Text style={styles.addBtnText}>추가</Text>
         </Pressable>
       </View>
 
-      <Text style={styles.inputHint}>
-        💡 비밀번호·주민번호 등 민감정보는 입력하지 마세요.
-      </Text>
+      <View style={styles.inputHint}>
+        <Icon name="info" size={13} color={theme.textFaint} />
+        <Text style={styles.inputHintText}>비밀번호·주민번호 등 민감정보는 입력하지 마세요.</Text>
+      </View>
 
       {actionError ? (
         <Pressable onPress={() => setActionError('')} style={styles.actionError} accessibilityRole="button" accessibilityLabel="오류 닫기">
@@ -270,32 +294,36 @@ function makeStyles(t: Theme) {
     container: { flex: 1, backgroundColor: t.bg },
     flex1: { flex: 1 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bg, padding: 24 },
-    header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 },
-    headerTitle: { fontSize: 28, fontWeight: '700', color: t.text },
-    count: { fontSize: 14, color: t.textMuted, marginTop: 4 },
-    headerRight: { alignItems: 'flex-end', gap: 6 },
-    headerTopRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    themeBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: t.surfaceAlt },
-    themeBtnText: { fontSize: 12, color: t.textMuted, fontWeight: '600' },
-    toggle: { flexDirection: 'row', backgroundColor: t.surfaceAlt, borderRadius: 10, padding: 2 },
-    toggleBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
+    topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.sm },
+    wordmark: { fontSize: typeScale.lg, fontWeight: weight.number, color: t.brandStrong, letterSpacing: 0.3 },
+    topActions: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+    themeBtn: { padding: space.sm, borderRadius: radius.sm, backgroundColor: t.surfaceAlt },
+    heroCard: { marginHorizontal: space.lg, marginBottom: space.md, padding: space.lg, backgroundColor: t.surface, borderRadius: radius.lg, ...shadow.sm },
+    heroTop: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+    heroNumWrap: { flex: 1 },
+    heroNum: { fontSize: typeScale.hero, fontWeight: weight.number, color: t.text, ...tabularNums },
+    heroDenom: { fontSize: typeScale.xxl, fontWeight: weight.number, color: t.textMuted, ...tabularNums },
+    heroLabel: { fontSize: typeScale.sm, color: t.textMuted, fontWeight: weight.label, marginTop: -space.xs },
+    heroPctWrap: { alignItems: 'flex-end', paddingBottom: space.xs },
+    heroPct: { fontSize: typeScale.xxl, fontWeight: weight.number, color: t.primary, ...tabularNums },
+    bar: { height: 8, borderRadius: radius.pill, backgroundColor: t.surfaceAlt, marginTop: space.md, overflow: 'hidden' },
+    barFill: { height: 8, borderRadius: radius.pill, backgroundColor: t.primary },
+    heroWeek: { fontSize: typeScale.sm, color: t.textMuted, marginTop: space.sm },
+    heroWeekNum: { fontWeight: weight.number, color: t.text, ...tabularNums },
+    toggleRow: { paddingHorizontal: space.lg, paddingBottom: space.md, alignItems: 'flex-start' },
+    toggle: { flexDirection: 'row', backgroundColor: t.surfaceAlt, borderRadius: radius.pill, padding: 3 },
+    toggleBtn: { paddingHorizontal: space.lg, paddingVertical: space.sm, borderRadius: radius.pill },
     toggleBtnActive: { backgroundColor: t.bg },
-    toggleText: { fontSize: 14, color: t.textMuted },
-    toggleTextActive: { color: t.text, fontWeight: '700' },
-    statsCard: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, padding: 14, backgroundColor: t.surface, borderRadius: 12 },
-    statCell: { flex: 1 },
-    statDivider: { width: StyleSheet.hairlineWidth, backgroundColor: t.border, marginHorizontal: 12 },
-    statValue: { fontSize: 24, fontWeight: '800', color: t.text },
-    statLabel: { fontSize: 12, color: t.textMuted, marginTop: 2 },
-    bar: { height: 6, borderRadius: 3, backgroundColor: t.surfaceAlt, marginTop: 8, overflow: 'hidden' },
-    barFill: { height: 6, borderRadius: 3, backgroundColor: t.primary },
-    addBar: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
-    inputHint: { paddingHorizontal: 16, paddingBottom: 10, fontSize: 12, color: t.textFaint },
-    input: { flex: 1, borderWidth: 1, borderColor: t.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: t.text, backgroundColor: t.bg },
-    dueToggle: { justifyContent: 'center', paddingHorizontal: 12, borderRadius: 8, backgroundColor: t.surfaceAlt },
-    dueToggleText: { fontSize: 13, color: t.textMuted, fontWeight: '600' },
-    addBtn: { backgroundColor: t.primary, borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center' },
-    addBtnText: { color: t.onPrimary, fontWeight: '600', fontSize: 16 },
+    toggleText: { fontSize: typeScale.sm, color: t.textMuted, fontWeight: weight.label },
+    toggleTextActive: { color: t.primary, fontWeight: weight.number },
+    addBar: { flexDirection: 'row', paddingHorizontal: space.lg, paddingBottom: space.sm, gap: space.sm },
+    inputHint: { flexDirection: 'row', alignItems: 'center', gap: space.xs, paddingHorizontal: space.lg, paddingBottom: space.md },
+    inputHintText: { fontSize: typeScale.xs, color: t.textFaint },
+    input: { flex: 1, borderWidth: 1, borderColor: t.border, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: space.md, fontSize: 16, color: t.text, backgroundColor: t.bg },
+    dueToggle: { flexDirection: 'row', alignItems: 'center', gap: space.xs, justifyContent: 'center', paddingHorizontal: space.md, borderRadius: radius.md, backgroundColor: t.surfaceAlt },
+    dueToggleText: { fontSize: typeScale.sm, color: t.textMuted, fontWeight: weight.label },
+    addBtn: { flexDirection: 'row', alignItems: 'center', gap: space.xs, backgroundColor: t.primary, borderRadius: radius.md, paddingHorizontal: space.lg, justifyContent: 'center' },
+    addBtnText: { color: t.onPrimary, fontWeight: weight.label, fontSize: typeScale.md },
     empty: { textAlign: 'center', color: t.textFaint, marginTop: 40 },
     actionError: { marginHorizontal: 16, marginBottom: 8, padding: 10, borderRadius: 8, backgroundColor: t.dangerBg },
     actionErrorText: { color: t.danger, fontSize: 13, fontWeight: '600' },
