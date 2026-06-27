@@ -33,12 +33,16 @@ export function LoginScreen({ onSwitchToSignup }: Props) {
     if (googleBusy || submitting) return;
     setGoogleBusy(true);
     setError('');
-    const r = await signInWithGoogle();
-    if (!r.ok) {
-      setError(r.error ?? '구글 로그인에 실패했어요.');
+    try {
+      const r = await signInWithGoogle();
+      if (!r.ok) setError(r.error ?? '구글 로그인에 실패했어요.');
+      // 성공: 웹은 리다이렉트, 네이티브는 onAuthStateChange로 전환됨
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '구글 로그인 오류');
+    } finally {
+      // 어떤 경우에도 상태를 풀어 이메일 로그인 버튼이 막히지 않게 한다(버그 수정)
       setGoogleBusy(false);
     }
-    // 성공: 웹은 리다이렉트, 네이티브는 onAuthStateChange로 전환됨
   };
 
   const handleSubmit = async () => {
