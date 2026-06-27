@@ -7,6 +7,9 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_SYNC_URL": "https://my-plan-by-son.netlify.app/.netlify/functions/sync"
+      },
       "android": {
         "buildType": "apk"
       }
@@ -14,6 +17,9 @@
     "production": {
       "channel": "production",
       "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SYNC_URL": "https://my-plan-by-son.netlify.app/.netlify/functions/sync"
+      },
       "android": {
         "buildType": "app-bundle"
       }
