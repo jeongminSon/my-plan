@@ -31,6 +31,7 @@ export function makeAuthStyles(t: Theme) {
     title: { fontSize: 26, fontWeight: '800', color: t.text },
     subtitle: { fontSize: 14, color: t.textMuted, marginTop: -6 },
     hint: { fontSize: 13, color: t.textFaint, lineHeight: 18 },
+    label: { fontSize: 13, fontWeight: weight.label, color: t.textMuted, marginBottom: 6 },
     // 주요 버튼: 가장 높은 대비(브랜드색은 버튼/강조에만)
     button: {
       minHeight: 48,

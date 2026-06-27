@@ -31,6 +31,26 @@ export async function sendPasswordReset(email: string): Promise<ResetResult> {
   }
 }
 
+/** 재설정 코드(OTP) 검증 → 복구 세션 생성 (딥링크 없이 웹/앱 공통) */
+export async function verifyRecoveryCode(
+  email: string,
+  token: string
+): Promise<{ ok: boolean; error?: string }> {
+  if (!supabase) return { ok: false, error: 'Supabase가 설정되지 않았습니다.' };
+  try {
+    const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token, type: 'recovery' });
+    if (error) {
+      const blob = `${error.message ?? ''} ${(error as { code?: string }).code ?? ''}`.toLowerCase();
+      if (/expired/.test(blob)) return { ok: false, error: '코드가 만료됐어요. 다시 요청해 주세요.' };
+      if (/invalid|incorrect|token|otp/.test(blob)) return { ok: false, error: '인증 코드가 올바르지 않아요.' };
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '코드 확인에 실패했어요.' };
+  }
+}
+
 /** 복구 세션에서 새 비밀번호로 변경 */
 export async function updatePassword(password: string): Promise<{ ok: boolean; error?: string }> {
   if (!supabase) return { ok: false, error: 'Supabase가 설정되지 않았습니다.' };
