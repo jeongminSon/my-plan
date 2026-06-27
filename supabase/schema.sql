@@ -88,23 +88,6 @@ create trigger lists_set_updated_at
   before update on public.lists
   for each row execute function public.set_updated_at();
 
--- ============================================================
--- 6) 중복 가입 방지용: 확정(confirmed) 계정 이메일 존재 여부 (boolean만 반환)
---    Supabase는 중복 가입 시 에러를 숨기므로(이메일 열거 방지), 앱이 사전 확인에 사용.
---    boolean만 노출 → 사용자 데이터는 노출하지 않음.
--- ============================================================
-create or replace function public.email_exists(p_email text)
-returns boolean
-language sql
-security definer
-set search_path = public
-as $$
-  select exists(
-    select 1 from auth.users
-    where lower(email) = lower(trim(p_email))
-      and email_confirmed_at is not null
-      and deleted_at is null
-  );
-$$;
-
-grant execute on function public.email_exists(text) to anon, authenticated;
+-- 참고: 중복 가입은 앱에서 사전 조회하지 않는다(이메일 열거 방지).
+-- Supabase의 "email enumeration protection"에 위임하고, 가입 흐름은 가입 여부와
+-- 무관하게 동일한 인증 화면으로 진행한다. (과거의 public.email_exists 함수는 제거됨)

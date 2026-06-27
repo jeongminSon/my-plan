@@ -44,19 +44,9 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
 
     setSubmitting(true);
     try {
-      // 중복 가입 사전 차단: DB 함수로 확정 계정 존재 확인(함수 미설치/오류면 조용히 건너뜀)
-      try {
-        const { data: exists, error: rpcErr } = await supabase.rpc('email_exists', {
-          p_email: email.trim(),
-        });
-        if (!rpcErr && exists === true) {
-          setTopError('이미 가입된 이메일입니다. 로그인해 주세요.');
-          return;
-        }
-      } catch {
-        // email_exists 함수가 없으면 무시하고 진행
-      }
-
+      // 열거(enumeration) 방지: 가입 여부를 사전 확인하지 않는다.
+      // 이미 가입된 이메일이어도 동일하게 인증 화면으로 진행 → Supabase의
+      // email enumeration protection이 존재 여부를 숨긴다(UI로 구분 불가).
       const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
       if (error) {
         const blob = `${error.message ?? ''} ${(error as { code?: string }).code ?? ''} ${
@@ -65,18 +55,13 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
         if (isNetworkError(error)) setTopError(MESSAGES.network);
         else if (/rate limit|over_email|too many|429/.test(blob))
           setTopError('가입 메일 발송 한도를 넘었어요. 잠시 후(보통 1시간 이내) 다시 시도해 주세요.');
-        else if (/registered|already|exists/.test(blob))
-          setTopError('이미 가입된 이메일입니다. 로그인해 주세요.');
         else if (/signup.*disabled|not allowed/.test(blob))
           setTopError('현재 회원가입이 비활성화되어 있어요.');
         else setTopError(MESSAGES.generic);
-      } else if (data.user && (data.user.identities?.length ?? 0) === 0) {
-        // Supabase 중복 신호(이메일 확인 활성 시 빈 identities) — 백업 가드
-        setTopError('이미 가입된 이메일입니다. 로그인해 주세요.');
       } else if (data.session) {
         // (Confirm email OFF인 경우) 자동 로그인 → AuthGate가 앱으로 전환
       } else {
-        // 표준 흐름: 가입 완료 화면으로 전환(확인메일 인증 후 로그인)
+        // 가입 여부와 무관하게 동일하게 코드 인증 화면으로(열거 비노출)
         setSignedUp(true);
       }
     } catch (e) {
@@ -140,6 +125,9 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
         <View style={s.card}>
           <Text style={s.title}>이메일 인증</Text>
           <Text style={s.subtitle}>{email.trim()} 로 보낸 인증 코드를 입력하세요.</Text>
+          <Text style={s.hint}>
+            코드가 오지 않으면 이미 가입된 계정일 수 있어요. 로그인을 시도해 보세요.
+          </Text>
 
           {otpError ? (
             <View style={[s.banner, s.bannerError]} accessibilityLiveRegion="polite">
