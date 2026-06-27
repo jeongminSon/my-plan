@@ -40,6 +40,12 @@
         "projectId": "42ba7928-43a3-4cb5-8939-d1a1cc9a1477"
       }
     },
-    "owner": "jeongminson"
+    "owner": "jeongminson",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/42ba7928-43a3-4cb5-8939-d1a1cc9a1477"
+    }
   }
 }
