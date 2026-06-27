@@ -1,6 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 
 /**
  * Supabase 클라이언트 (anon 키). RLS로 보호되므로 anon 키는 프런트 노출 OK.
@@ -27,7 +28,8 @@ export const supabase: SupabaseClient | null =
           storage: AsyncStorage, // 웹=localStorage, 네이티브=기기 저장소
           autoRefreshToken: true,
           persistSession: true,
-          detectSessionInUrl: false, // RN/Expo 환경(웹 매직링크는 다음 단계에서 처리)
+          flowType: 'pkce', // OAuth(구글)·이메일 모두 안전한 PKCE
+          detectSessionInUrl: Platform.OS === 'web', // 웹: OAuth 리다이렉트 세션 자동 처리
         },
       })
     : null;
