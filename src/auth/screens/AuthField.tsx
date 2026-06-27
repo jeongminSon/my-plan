@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Theme } from '../../theme/theme';
 import { useTheme } from '../../theme/ThemeContext';
+import { PressableState, webFocusRing, webInputReset } from './authStyles';
 
 interface Props {
   label: string;
@@ -46,13 +47,20 @@ export function AuthField({
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [hidden, setHidden] = useState(true);
+  const [focused, setFocused] = useState(false);
 
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>{label}</Text>
-      <View style={[styles.inputRow, error ? styles.inputRowError : undefined]}>
+      <View
+        style={[
+          styles.inputRow,
+          error ? styles.inputRowError : undefined,
+          webFocusRing(focused, theme.primary),
+        ]}
+      >
         <TextInput
-          style={styles.input}
+          style={[styles.input, webInputReset]}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secure ? hidden : false}
@@ -64,13 +72,18 @@ export function AuthField({
           autoComplete={autoComplete}
           returnKeyType={returnKeyType}
           onSubmitEditing={onSubmitEditing}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           editable={editable}
           accessibilityLabel={label}
         />
         {secure ? (
           <Pressable
             onPress={() => setHidden((h) => !h)}
-            style={styles.toggle}
+            style={(st) => [
+              styles.toggle,
+              webFocusRing((st as PressableState).focused ?? false, theme.primary),
+            ]}
             accessibilityRole="button"
             accessibilityLabel={hidden ? '비밀번호 표시' : '비밀번호 숨기기'}
             hitSlop={8}

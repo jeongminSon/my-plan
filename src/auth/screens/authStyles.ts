@@ -1,5 +1,27 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
+import type { TextStyle, ViewStyle } from 'react-native';
 import { Theme } from '../../theme/theme';
+
+const IS_WEB = Platform.OS === 'web';
+
+/** Pressable의 style 콜백 상태(웹은 focused/hovered 포함 — RN 타입엔 없어 보강). */
+export type PressableState = { pressed: boolean; focused?: boolean; hovered?: boolean };
+
+/** 웹 키보드 포커스 링(아웃라인 — 레이아웃에 영향 없음). 네이티브는 무시. */
+export function webFocusRing(focused: boolean, color: string): ViewStyle | undefined {
+  if (!focused || !IS_WEB) return undefined;
+  return {
+    outlineColor: color,
+    outlineStyle: 'solid',
+    outlineWidth: 2,
+    outlineOffset: 2,
+  } as ViewStyle;
+}
+
+/** 입력 기본 아웃라인 제거(래퍼에 커스텀 링을 그리므로 중복 방지). */
+export const webInputReset: TextStyle = IS_WEB
+  ? ({ outlineStyle: 'none' } as unknown as TextStyle)
+  : {};
 
 /** 인증 화면 공통 스타일 (모바일 우선, 중앙 단일 컬럼). */
 export function makeAuthStyles(t: Theme) {

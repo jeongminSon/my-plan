@@ -12,7 +12,7 @@ import {
   validateSignup,
 } from '../validation';
 import { AuthField } from './AuthField';
-import { makeAuthStyles } from './authStyles';
+import { makeAuthStyles, PressableState, webFocusRing } from './authStyles';
 
 interface Props {
   onSwitchToLogin: () => void;
@@ -170,7 +170,11 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
           />
 
           <Pressable
-            style={[s.button, (otp.length < 6 || verifying) && s.buttonDisabled]}
+            style={(st) => [
+              s.button,
+              (otp.length < 6 || verifying) && s.buttonDisabled,
+              webFocusRing((st as PressableState).focused ?? false, theme.text),
+            ]}
             onPress={handleVerify}
             disabled={otp.length < 6 || verifying}
             accessibilityRole="button"
@@ -181,12 +185,21 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
 
           <View style={s.linkRow}>
             <Text style={s.linkMuted}>코드를 못 받으셨나요?</Text>
-            <Pressable onPress={handleResend} accessibilityRole="link" disabled={resending}>
+            <Pressable
+              onPress={handleResend}
+              accessibilityRole="link"
+              disabled={resending}
+              style={(st) => webFocusRing((st as PressableState).focused ?? false, theme.primary)}
+            >
               <Text style={s.link}>{resending ? '전송 중…' : '코드 재전송'}</Text>
             </Pressable>
           </View>
           <View style={s.linkRow}>
-            <Pressable onPress={onSwitchToLogin} accessibilityRole="link">
+            <Pressable
+              onPress={onSwitchToLogin}
+              accessibilityRole="link"
+              style={(st) => webFocusRing((st as PressableState).focused ?? false, theme.primary)}
+            >
               <Text style={s.linkMuted}>로그인으로 돌아가기</Text>
             </Pressable>
           </View>
@@ -255,7 +268,11 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
         />
 
         <Pressable
-          style={[s.button, submitting && s.buttonDisabled]}
+          style={(st) => [
+            s.button,
+            submitting && s.buttonDisabled,
+            webFocusRing((st as PressableState).focused ?? false, theme.text),
+          ]}
           onPress={handleSubmit}
           disabled={submitting}
           accessibilityRole="button"
@@ -267,7 +284,12 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
 
         <View style={s.linkRow}>
           <Text style={s.linkMuted}>이미 계정이 있으세요?</Text>
-          <Pressable onPress={onSwitchToLogin} accessibilityRole="link" disabled={submitting}>
+          <Pressable
+            onPress={onSwitchToLogin}
+            accessibilityRole="link"
+            disabled={submitting}
+            style={(st) => webFocusRing((st as PressableState).focused ?? false, theme.primary)}
+          >
             <Text style={s.link}>로그인</Text>
           </Pressable>
         </View>

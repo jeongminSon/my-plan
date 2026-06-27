@@ -5,7 +5,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { signInWithGoogle } from '../supabaseGoogle';
 import { isNetworkError, MESSAGES } from '../validation';
 import { AuthField } from './AuthField';
-import { makeAuthStyles } from './authStyles';
+import { makeAuthStyles, PressableState, webFocusRing } from './authStyles';
 
 interface Props {
   onSwitchToSignup: () => void;
@@ -101,7 +101,11 @@ export function LoginScreen({ onSwitchToSignup }: Props) {
         />
 
         <Pressable
-          style={[s.button, !canSubmit && s.buttonDisabled]}
+          style={(st) => [
+            s.button,
+            !canSubmit && s.buttonDisabled,
+            webFocusRing((st as PressableState).focused ?? false, theme.text),
+          ]}
           onPress={handleSubmit}
           disabled={!canSubmit}
           accessibilityRole="button"
@@ -118,7 +122,11 @@ export function LoginScreen({ onSwitchToSignup }: Props) {
         </View>
 
         <Pressable
-          style={[s.googleBtn, (googleBusy || submitting) && s.buttonDisabled]}
+          style={(st) => [
+            s.googleBtn,
+            (googleBusy || submitting) && s.buttonDisabled,
+            webFocusRing((st as PressableState).focused ?? false, theme.primary),
+          ]}
           onPress={handleGoogle}
           disabled={googleBusy || submitting}
           accessibilityRole="button"
@@ -130,7 +138,12 @@ export function LoginScreen({ onSwitchToSignup }: Props) {
 
         <View style={s.linkRow}>
           <Text style={s.linkMuted}>계정이 없으세요?</Text>
-          <Pressable onPress={onSwitchToSignup} accessibilityRole="link" disabled={submitting}>
+          <Pressable
+            onPress={onSwitchToSignup}
+            accessibilityRole="link"
+            disabled={submitting}
+            style={(st) => webFocusRing((st as PressableState).focused ?? false, theme.primary)}
+          >
             <Text style={s.link}>회원가입</Text>
           </Pressable>
         </View>
