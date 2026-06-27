@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.jeongminson.myplan",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -33,6 +34,12 @@
           "backgroundColor": "#2f6fed"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "42ba7928-43a3-4cb5-8939-d1a1cc9a1477"
+      }
+    },
+    "owner": "jeongminson"
   }
 }
