@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SupabaseTaskRepository } from '../data/supabaseRepository';
 import { TaskRepository } from '../data/taskRepository';
 import { migrateLocalToCloud, MigrationResult } from './migrateLocalToCloud';
+import { sanitizeIds } from './sanitizeIds';
 
 /**
  * 실제 마이그레이션 실행 (오케스트레이터에 실 의존성 주입).
@@ -19,10 +20,12 @@ export async function runMigration(
 
   return migrateLocalToCloud({
     isMigrated: async () => (await AsyncStorage.getItem(flagKey)) === '1',
-    readLocal: async () => ({
-      tasks: await localRepo.getAll(),
-      lists: await localRepo.getLists(),
-    }),
+    readLocal: async () => {
+      // 예전 비-UUID id를 UUID로 정규화 → uuid 컬럼 거부로 인한 마이그레이션 실패 방지
+      const tasks = await localRepo.getAll();
+      const lists = await localRepo.getLists();
+      return sanitizeIds(tasks, lists);
+    },
     backupLocal: async (data) => {
       await AsyncStorage.setItem(backupKey, JSON.stringify({ savedAt: Date.now(), ...data }));
     },

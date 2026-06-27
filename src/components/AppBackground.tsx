@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode, useEffect, useMemo, useRef } from 'react';
 import { AccessibilityInfo, Animated, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { backgroundSet } from '../theme/backgrounds';
@@ -56,11 +55,21 @@ export function AppBackground({ children, intensity = 'full', now }: Props) {
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        {/* 2) 상단 워시(아래로 사라짐) */}
-        <LinearGradient
-          colors={[set.wash, theme.bg]}
-          style={[styles.wash, { height: height * 0.5, opacity: op(0.5) }]}
-        />
+        {/* 2) 상단 워시(아래로 사라짐) — 반투명 밴드 스택(네이티브 모듈 불필요, OTA 안전) */}
+        {[0, 1, 2, 3, 4].map((i) => (
+          <View
+            key={i}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: height * (0.5 - i * 0.08),
+              backgroundColor: set.wash,
+              opacity: op(0.16) * (1 - i * 0.12),
+            }}
+          />
+        ))}
         {/* 3) 소프트 오브 2개 */}
         <View
           style={[
