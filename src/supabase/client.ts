@@ -33,3 +33,28 @@ export const supabase: SupabaseClient | null =
         },
       })
     : null;
+
+// ── 비밀번호 재설정 복귀(PASSWORD_RECOVERY) 캡처 ────────────────────────
+// 이 이벤트는 detectSessionInUrl 처리 중(React 마운트 전)에 발생할 수 있어,
+// 모듈 로드 시점에 구독해 놓쳐도 플래그로 보존한다.
+let recoveryFlag = false;
+const recoveryListeners = new Set<() => void>();
+if (supabase) {
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      recoveryFlag = true;
+      recoveryListeners.forEach((fn) => fn());
+    }
+  });
+}
+
+export const recovery = {
+  get: (): boolean => recoveryFlag,
+  clear: (): void => {
+    recoveryFlag = false;
+  },
+  subscribe: (fn: () => void): (() => void) => {
+    recoveryListeners.add(fn);
+    return () => recoveryListeners.delete(fn);
+  },
+};
