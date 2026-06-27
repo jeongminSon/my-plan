@@ -45,6 +45,19 @@ export function makeAuthStyles(t: Theme) {
       gap: 8,
     },
     googleBtnText: { color: t.text, fontSize: 15, fontWeight: '700' },
+    // 6자리 코드 입력
+    otpInput: {
+      minHeight: 56,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: t.border,
+      backgroundColor: t.bg,
+      color: t.text,
+      fontSize: 28,
+      fontWeight: '700',
+      letterSpacing: 8,
+      paddingHorizontal: 16,
+    },
     // 링크
     linkRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' },
     linkMuted: { color: t.textMuted, fontSize: 14 },

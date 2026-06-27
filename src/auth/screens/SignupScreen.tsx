@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { supabase } from '../../supabase/client';
 import { Theme } from '../../theme/theme';
 import { useTheme } from '../../theme/ThemeContext';
@@ -28,6 +28,12 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [topError, setTopError] = useState('');
   const [signedUp, setSignedUp] = useState(false);
+  // 6자리 코드 인증
+  const [otp, setOtp] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   const handleSubmit = async () => {
     if (submitting || !supabase) return; // 중복 제출 차단
@@ -64,21 +70,110 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
     }
   };
 
-  // 가입 완료(확인메일 발송) → 전용 완료 화면 + 로그인 이동
+  const handleVerify = async () => {
+    if (otp.length !== 6 || verifying || !supabase) return;
+    setVerifying(true);
+    setOtpError('');
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: otp,
+        type: 'signup',
+      });
+      if (error) {
+        const blob = `${error.message ?? ''} ${(error as { code?: string }).code ?? ''}`.toLowerCase();
+        if (isNetworkError(error)) setOtpError(MESSAGES.network);
+        else if (/expired/.test(blob)) setOtpError('코드가 만료됐어요. 아래 재전송을 눌러 주세요.');
+        else if (/invalid|incorrect|token|otp/.test(blob)) setOtpError('인증 코드가 올바르지 않아요.');
+        else setOtpError(MESSAGES.generic);
+      }
+      // 성공: 세션 생성 → AuthGate가 앱으로 전환(별도 네비게이션 불필요)
+    } catch (e) {
+      setOtpError(isNetworkError(e) ? MESSAGES.network : MESSAGES.generic);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (resending || !supabase) return;
+    setResending(true);
+    setOtpError('');
+    setResent(false);
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
+      if (error) {
+        const blob = `${error.message ?? ''} ${(error as { code?: string }).code ?? ''}`.toLowerCase();
+        if (/rate limit|over_email|too many|429/.test(blob))
+          setOtpError('재전송 한도를 넘었어요. 잠시 후 다시 시도해 주세요.');
+        else setOtpError(MESSAGES.generic);
+      } else {
+        setResent(true);
+      }
+    } catch (e) {
+      setOtpError(isNetworkError(e) ? MESSAGES.network : MESSAGES.generic);
+    } finally {
+      setResending(false);
+    }
+  };
+
+  // 가입 후 → 6자리 코드 인증 화면
   if (signedUp) {
     return (
       <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
         <View style={s.card}>
-          <Text style={s.title}>회원가입 완료 🎉</Text>
-          <View style={[s.banner, s.bannerSuccess]} accessibilityLiveRegion="polite">
-            <Text style={s.bannerIconSuccess}>✓</Text>
-            <Text style={s.bannerTextSuccess}>
-              {email.trim()} 로 확인 메일을 보냈어요. 메일의 링크로 인증한 뒤 로그인해 주세요.
-            </Text>
-          </View>
-          <Pressable style={s.button} onPress={onSwitchToLogin} accessibilityRole="button">
-            <Text style={s.buttonText}>로그인하러 가기</Text>
+          <Text style={s.title}>이메일 인증</Text>
+          <Text style={s.subtitle}>{email.trim()} 로 보낸 6자리 코드를 입력하세요.</Text>
+
+          {otpError ? (
+            <View style={[s.banner, s.bannerError]} accessibilityLiveRegion="polite">
+              <Text style={s.bannerIconError}>⚠</Text>
+              <Text style={s.bannerTextError}>{otpError}</Text>
+            </View>
+          ) : null}
+          {resent ? (
+            <View style={[s.banner, s.bannerSuccess]} accessibilityLiveRegion="polite">
+              <Text style={s.bannerIconSuccess}>✓</Text>
+              <Text style={s.bannerTextSuccess}>코드를 다시 보냈어요. 메일함을 확인해 주세요.</Text>
+            </View>
+          ) : null}
+
+          <TextInput
+            style={s.otpInput}
+            value={otp}
+            onChangeText={(t) => setOtp(t.replace(/\D/g, '').slice(0, 6))}
+            keyboardType="number-pad"
+            maxLength={6}
+            placeholder="000000"
+            placeholderTextColor={theme.textFaint}
+            editable={!verifying}
+            textAlign="center"
+            returnKeyType="done"
+            onSubmitEditing={handleVerify}
+            accessibilityLabel="6자리 인증 코드"
+          />
+
+          <Pressable
+            style={[s.button, (otp.length !== 6 || verifying) && s.buttonDisabled]}
+            onPress={handleVerify}
+            disabled={otp.length !== 6 || verifying}
+            accessibilityRole="button"
+          >
+            {verifying ? <ActivityIndicator color={theme.onPrimary} /> : null}
+            <Text style={s.buttonText}>{verifying ? '인증 중…' : '인증하고 시작하기'}</Text>
           </Pressable>
+
+          <View style={s.linkRow}>
+            <Text style={s.linkMuted}>코드를 못 받으셨나요?</Text>
+            <Pressable onPress={handleResend} accessibilityRole="link" disabled={resending}>
+              <Text style={s.link}>{resending ? '전송 중…' : '코드 재전송'}</Text>
+            </Pressable>
+          </View>
+          <View style={s.linkRow}>
+            <Pressable onPress={onSwitchToLogin} accessibilityRole="link">
+              <Text style={s.linkMuted}>로그인으로 돌아가기</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     );
