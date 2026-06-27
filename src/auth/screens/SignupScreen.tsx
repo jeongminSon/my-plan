@@ -52,9 +52,8 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
 
     setSubmitting(true);
     try {
-      // 열거(enumeration) 방지: 가입 여부를 사전 확인하지 않는다.
-      // 이미 가입된 이메일이어도 동일하게 인증 화면으로 진행 → Supabase의
-      // email enumeration protection이 존재 여부를 숨긴다(UI로 구분 불가).
+      // 중복 가입 방지: 사전 RPC 조회(무제한 열거 벡터)는 두지 않고,
+      // 가입 응답만으로 판별한다 → 노출은 가입 시도당(Supabase 레이트리밋 적용)으로 최소.
       const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
       if (error) {
         const blob = `${error.message ?? ''} ${(error as { code?: string }).code ?? ''} ${
@@ -63,13 +62,18 @@ export function SignupScreen({ onSwitchToLogin }: Props) {
         if (isNetworkError(error)) setTopError(MESSAGES.network);
         else if (/rate limit|over_email|too many|429/.test(blob))
           setTopError('가입 메일 발송 한도를 넘었어요. 잠시 후(보통 1시간 이내) 다시 시도해 주세요.');
+        else if (/registered|already|exists/.test(blob))
+          setTopError('이미 가입된 이메일입니다. 로그인해 주세요.');
         else if (/signup.*disabled|not allowed/.test(blob))
           setTopError('현재 회원가입이 비활성화되어 있어요.');
         else setTopError(MESSAGES.generic);
+      } else if (data.user && (data.user.identities?.length ?? 0) === 0) {
+        // Supabase 중복 신호: 이미 가입된 "확정" 계정 → 빈 identities 반환
+        setTopError('이미 가입된 이메일입니다. 로그인해 주세요.');
       } else if (data.session) {
         // (Confirm email OFF인 경우) 자동 로그인 → AuthGate가 앱으로 전환
       } else {
-        // 가입 여부와 무관하게 동일하게 코드 인증 화면으로(열거 비노출)
+        // 신규(또는 미확정) → 코드 인증 화면으로
         setSignedUp(true);
       }
     } catch (e) {
