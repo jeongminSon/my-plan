@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { APP_VERSION } from '../appInfo';
+import { useAuth } from '../auth/AuthContext';
 import { SyncStore } from '../sync/SyncStore';
 import { syncNow } from '../sync/SyncService';
 import { getOrCreateUserKey, setUserKey } from '../sync/syncSettings';
@@ -21,6 +22,7 @@ interface Props {
 export function SyncBar({ store, onSynced }: Props) {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const { user, configured, signIn, signOut } = useAuth();
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -77,23 +79,52 @@ export function SyncBar({ store, onSynced }: Props) {
 
       {expanded ? (
         <View style={styles.panel}>
-          <Text style={styles.panelLabel}>이 기기의 동기화 코드(다른 기기에 입력하면 공유)</Text>
-          <TextInput style={styles.codeBox} value={deviceKey} editable={false} selectTextOnFocus />
-          <Text style={styles.panelLabel}>다른 기기 코드 적용</Text>
-          <View style={styles.applyRow}>
-            <TextInput
-              style={styles.input}
-              placeholder="동기화 코드 붙여넣기"
-              placeholderTextColor={theme.textFaint}
-              value={codeInput}
-              onChangeText={setCodeInput}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <Pressable style={styles.applyBtn} onPress={handleApplyCode} accessibilityRole="button">
-              <Text style={styles.applyBtnText}>적용</Text>
-            </Pressable>
-          </View>
+          {/* 구글 로그인(설정된 경우) */}
+          {configured ? (
+            user ? (
+              <View style={styles.authRow}>
+                <Text style={styles.authEmail} numberOfLines={1}>📧 {user.email ?? '구글 계정 로그인됨'}</Text>
+                <Pressable style={styles.logoutBtn} onPress={signOut} accessibilityRole="button">
+                  <Text style={styles.logoutText}>로그아웃</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                style={styles.googleBtn}
+                onPress={async () => {
+                  const s = await signIn();
+                  setStatus(s ? '구글 로그인됨 — 동기화하세요.' : '로그인이 취소되었습니다.');
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={styles.googleText}>구글로 로그인</Text>
+              </Pressable>
+            )
+          ) : null}
+
+          {user ? (
+            <Text style={styles.panelLabel}>구글 계정으로 동기화됩니다(기기 간 자동 공유).</Text>
+          ) : (
+            <>
+              <Text style={styles.panelLabel}>이 기기의 동기화 코드(다른 기기에 입력하면 공유)</Text>
+              <TextInput style={styles.codeBox} value={deviceKey} editable={false} selectTextOnFocus />
+              <Text style={styles.panelLabel}>다른 기기 코드 적용</Text>
+              <View style={styles.applyRow}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="동기화 코드 붙여넣기"
+                  placeholderTextColor={theme.textFaint}
+                  value={codeInput}
+                  onChangeText={setCodeInput}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Pressable style={styles.applyBtn} onPress={handleApplyCode} accessibilityRole="button">
+                  <Text style={styles.applyBtnText}>적용</Text>
+                </Pressable>
+              </View>
+            </>
+          )}
         </View>
       ) : null}
     </View>
@@ -135,5 +166,11 @@ function makeStyles(t: Theme) {
     },
     applyBtn: { backgroundColor: t.primary, borderRadius: 8, paddingHorizontal: 14, justifyContent: 'center' },
     applyBtnText: { color: t.onPrimary, fontWeight: '700' },
+    googleBtn: { backgroundColor: t.primary, borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
+    googleText: { color: t.onPrimary, fontWeight: '700', fontSize: 14 },
+    authRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    authEmail: { flex: 1, color: t.text, fontSize: 13, fontWeight: '600' },
+    logoutBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, backgroundColor: t.surfaceAlt },
+    logoutText: { color: t.textMuted, fontWeight: '600', fontSize: 12 },
   });
 }

@@ -1,4 +1,25 @@
 import { getStore } from '@netlify/blobs';
+import { OAuth2Client } from 'google-auth-library';
+
+const googleClient = new OAuth2Client();
+
+/**
+ * 구글 id_token 검증 → 검증된 sub 반환.
+ * audience(허용 클라이언트 ID)는 Netlify 환경변수 GOOGLE_ALLOWED_AUDIENCES(쉼표구분)에서 읽는다.
+ */
+async function verifyGoogleSub(idToken) {
+  const audiences = (process.env.GOOGLE_ALLOWED_AUDIENCES || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (audiences.length === 0) {
+    throw new Error('GOOGLE_ALLOWED_AUDIENCES 미설정');
+  }
+  const ticket = await googleClient.verifyIdToken({ idToken, audience: audiences });
+  const payload = ticket.getPayload();
+  if (!payload || !payload.sub) throw new Error('invalid token payload');
+  return payload.sub;
+}
 
 /**
  * 동기화 서버 (Netlify Function + Netlify Blobs).
@@ -23,9 +44,22 @@ export default async (req) => {
   if (req.method === 'OPTIONS') return new Response('', { status: 204, headers: cors });
 
   const url = new URL(req.url);
-  const userKey = req.headers.get('x-sync-key') || url.searchParams.get('key');
+
+  // 인증: 구글 Bearer(검증) 우선, 없으면 익명 x-sync-key
+  let userKey;
+  const authz = req.headers.get('authorization');
+  if (authz && authz.startsWith('Bearer ')) {
+    try {
+      const sub = await verifyGoogleSub(authz.slice(7));
+      userKey = `g:${sub}`; // 구글 계정별 격리
+    } catch (e) {
+      return Response.json({ error: `invalid google token: ${e.message}` }, { status: 401, headers: cors });
+    }
+  } else {
+    userKey = req.headers.get('x-sync-key') || url.searchParams.get('key');
+  }
   if (!userKey || userKey.length < 8) {
-    return Response.json({ error: 'missing or invalid x-sync-key' }, { status: 400, headers: cors });
+    return Response.json({ error: 'missing or invalid auth' }, { status: 400, headers: cors });
   }
 
   const store = getStore('my-plan-sync');

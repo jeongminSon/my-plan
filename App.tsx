@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { AuthProvider } from './src/auth/AuthContext';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { taskRepository } from './src/data/db';
 import { notificationService } from './src/services/notifications';
@@ -12,7 +13,9 @@ export default function App() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <ThemeProvider>
-          <ThemedRoot />
+          <AuthProvider>
+            <ThemedRoot />
+          </AuthProvider>
         </ThemeProvider>
       </ErrorBoundary>
     </SafeAreaProvider>

@@ -28,7 +28,7 @@ describe('HttpRemote', () => {
       calls.push({ url, init });
       return jsonResponse({ ok: true, cursor: 1 });
     };
-    const remote = new HttpRemote('https://site/.netlify/functions/sync', 'user-123', fetchFn);
+    const remote = new HttpRemote('https://site/.netlify/functions/sync', { key: 'user-123' }, fetchFn);
 
     await remote.push([task('a', 100)], []);
 
@@ -41,7 +41,7 @@ describe('HttpRemote', () => {
 
   it('변경이 없으면 네트워크를 호출하지 않는다', async () => {
     let called = 0;
-    const remote = new HttpRemote('https://x', 'k', async () => {
+    const remote = new HttpRemote('https://x', { key: 'k' }, async () => {
       called += 1;
       return jsonResponse({});
     });
@@ -55,7 +55,7 @@ describe('HttpRemote', () => {
       seenUrl = url;
       return jsonResponse({ tasks: [task('a', 100)], lists: [], cursor: 7 });
     };
-    const remote = new HttpRemote('https://site/fn', 'user-123', fetchFn);
+    const remote = new HttpRemote('https://site/fn', { key: 'user-123' }, fetchFn);
 
     const res = await remote.pull(3);
     expect(seenUrl).toContain('since=3');
@@ -64,7 +64,19 @@ describe('HttpRemote', () => {
   });
 
   it('HTTP 오류는 예외를 던진다', async () => {
-    const remote = new HttpRemote('https://x', 'k', async () => jsonResponse({}, false, 500));
+    const remote = new HttpRemote('https://x', { key: 'k' }, async () => jsonResponse({}, false, 500));
     await expect(remote.pull(0)).rejects.toThrow('pull 실패');
+  });
+
+  it('구글 로그인 시 Authorization: Bearer 헤더를 보낸다', async () => {
+    let headers: Record<string, string> = {};
+    const fetchFn = async (_url: string, init?: RequestInit) => {
+      headers = (init?.headers as Record<string, string>) ?? {};
+      return jsonResponse({ tasks: [], lists: [], cursor: 0 });
+    };
+    const remote = new HttpRemote('https://x', { bearer: 'ID_TOKEN_123' }, fetchFn);
+    await remote.pull(0);
+    expect(headers.Authorization).toBe('Bearer ID_TOKEN_123');
+    expect(headers['x-sync-key']).toBeUndefined();
   });
 });
