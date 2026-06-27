@@ -50,6 +50,6 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#fff' },
   title: { fontSize: 20, fontWeight: '700', color: '#111', marginBottom: 8 },
   body: { fontSize: 15, color: '#555', textAlign: 'center', marginBottom: 20, lineHeight: 22 },
-  button: { backgroundColor: '#2f6fed', borderRadius: 10, paddingHorizontal: 24, paddingVertical: 12 },
+  button: { backgroundColor: '#3B5BDB', borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
